@@ -5,7 +5,7 @@ Project Memory Agent is an early local CLI prototype for reconstructing and main
 ## Current Pipeline
 
 ```text
-raw project artifacts -> artifacts_index.json -> parsed_artifacts.json -> combined_notes.md with SOURCE markers -> project_state.json -> project_state_card.md -> checkpoint_summary.md -> latest/ and runs/<timestamp>/ checkpoint history
+raw project artifacts -> artifacts_index.json -> parsed_artifacts.json -> combined_notes.md with SOURCE markers -> project_state.json -> project_state_card.md -> checkpoint_summary.md -> progress_since_last.md -> latest/ and runs/<timestamp>/ checkpoint history
 ```
 
 ## Supported Artifact Types
@@ -51,6 +51,7 @@ outputs/checkpoints/dflash_multi/
     project_state.json
     project_state_card.md
     checkpoint_summary.md
+    progress_since_last.md
   runs/
     <timestamp>/
       artifacts_index.json
@@ -59,6 +60,7 @@ outputs/checkpoints/dflash_multi/
       project_state.json
       project_state_card.md
       checkpoint_summary.md
+      progress_since_last.md
 ```
 
 ## Main Output Files
@@ -69,6 +71,9 @@ outputs/checkpoints/dflash_multi/
 - `project_state.json`: validated structured project state.
 - `project_state_card.md`: readable project state card.
 - `checkpoint_summary.md`: short checkpoint overview and basic quality checks.
+- `progress_since_last.md`: source-change-aware progress report against the previous latest checkpoint.
+
+The progress report is available only in history mode and is not a generic JSON diff. It first compares SHA256 hashes of the source artifacts. If sources are unchanged, the `ProjectState` comparison is skipped to avoid LLM paraphrase noise. When sources change, scalar summary fields are shown only as the current snapshot, while meaningful list changes use exact string matching; evidence is not compared yet.
 
 ## Legacy Mode
 
@@ -87,4 +92,3 @@ python src/checkpoint.py \
 - Web UI
 - Autonomous multi-agent loop
 - LLM-based artifact analysis layer
-- Automatic diffs between checkpoints

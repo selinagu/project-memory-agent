@@ -29,6 +29,10 @@ class ParsedArtifact(BaseModel):
         description="Path relative to the project directory."
     )
     artifact_type: str
+    content_hash: str = Field(
+        default="",
+        description="SHA256 hash of the original artifact content."
+    )
     content_for_llm: str
     metadata: Dict[str, Any] = Field(default_factory=dict)
     warnings: List[str] = Field(default_factory=list)

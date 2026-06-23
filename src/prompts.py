@@ -9,7 +9,10 @@ Rules:
 - A confirmed finding must be directly supported by the notes.
 - A tentative hypothesis should be a plausible explanation for observed findings, not merely an unresolved question.
 - Open questions should contain unresolved questions that require future work.
-- Important decisions should contain choices about project direction, formulation, benchmark, method, or experimental focus. Do not mix numerical findings into important_decisions.
+- Important decisions must be explicit decisions stated in the notes, such as choices about project direction, formulation, benchmark, method, experimental focus, or implementation approach.
+- Do not infer important decisions from numerical results, observations, or generic next actions.
+- Do not convert next steps into important decisions unless the notes explicitly frame them as a decision.
+- If no explicit decisions are stated, use an empty list for important_decisions.
 - Failed attempts should include both failed implementation attempts and unresolved blockers or difficulties. If there are no failed attempts but there is a current blocker, include the blocker.
 - If the notes do not mention failed attempts or blockers, use an empty list.
 - Include concrete next actions when the notes mention or imply what should happen next.

@@ -7,6 +7,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from artifacts import ParsedArtifactBundle
+from diff_states import render_progress_since_last
 from scan_project import scan_project
 from parsers import parse_artifacts
 from extract_state import extract_state
@@ -28,7 +29,11 @@ def build_combined_notes(parsed_artifacts: ParsedArtifactBundle) -> str:
     return "\n\n---\n\n".join(sections)
 
 
-def write_checkpoint_outputs(project_dir: Path, output_dir: Path, model: str) -> None:
+def write_checkpoint_outputs(
+    project_dir: Path,
+    output_dir: Path,
+    model: str,
+) -> tuple[ProjectState, ParsedArtifactBundle]:
     project_dir = project_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -83,6 +88,8 @@ def write_checkpoint_outputs(project_dir: Path, output_dir: Path, model: str) ->
     print(f"Project state card: {card_path}")
     print(f"Checkpoint summary: {checkpoint_summary_path}")
 
+    return state, parsed_artifacts
+
 
 def copy_run_to_latest(run_dir: Path, latest_dir: Path) -> None:
     if latest_dir.exists():
@@ -111,19 +118,43 @@ def run_checkpoint_with_history(
     project_output_dir = base_output_dir / project_name
     run_dir = project_output_dir / "runs" / timestamp
     latest_dir = project_output_dir / "latest"
+    previous_state_path = latest_dir / "project_state.json"
+    previous_parsed_artifacts_path = latest_dir / "parsed_artifacts.json"
+
+    previous_state = None
+    if previous_state_path.exists():
+        previous_state = ProjectState.model_validate_json(
+            previous_state_path.read_text(encoding="utf-8")
+        )
+
+    previous_parsed_artifacts = None
+    if previous_parsed_artifacts_path.exists():
+        previous_parsed_artifacts = ParsedArtifactBundle.model_validate_json(
+            previous_parsed_artifacts_path.read_text(encoding="utf-8")
+        )
 
     print("Running checkpoint with history.")
     print(f"Project name: {project_name}")
     print(f"Run dir: {run_dir}")
 
-    write_checkpoint_outputs(
+    new_state, new_parsed_artifacts = write_checkpoint_outputs(
         project_dir=project_dir,
         output_dir=run_dir,
         model=model,
     )
 
+    progress = render_progress_since_last(
+        previous_state,
+        new_state,
+        previous_parsed_artifacts,
+        new_parsed_artifacts,
+    )
+    progress_path = run_dir / "progress_since_last.md"
+    progress_path.write_text(progress, encoding="utf-8")
+
     copy_run_to_latest(run_dir=run_dir, latest_dir=latest_dir)
 
+    print(f"Progress since last checkpoint: {progress_path}")
     print(f"Latest updated: {latest_dir}")
 
 

@@ -1,4 +1,5 @@
 import csv
+import hashlib
 import io
 import json
 import math
@@ -245,11 +246,13 @@ def parse_artifact(project_dir: Path, artifact: ArtifactRecord) -> ParsedArtifac
     warnings: list[str] = []
 
     try:
-        content = path.read_text(encoding="utf-8", errors="replace")
+        raw_content = path.read_bytes()
+        content = raw_content.decode("utf-8", errors="replace")
     except Exception as e:
         return ParsedArtifact(
             path=artifact.path,
             artifact_type=artifact.artifact_type,
+            content_hash="",
             content_for_llm=f"[Could not read artifact: {e}]",
             metadata={
                 "size_bytes": artifact.size_bytes,
@@ -257,6 +260,8 @@ def parse_artifact(project_dir: Path, artifact: ArtifactRecord) -> ParsedArtifac
             },
             warnings=[f"Could not read artifact: {e}"],
         )
+
+    content_hash = hashlib.sha256(raw_content).hexdigest()
 
     if "\ufffd" in content:
         warnings.append("Invalid UTF-8 bytes were replaced while reading the artifact.")
@@ -289,6 +294,7 @@ def parse_artifact(project_dir: Path, artifact: ArtifactRecord) -> ParsedArtifac
     return ParsedArtifact(
         path=artifact.path,
         artifact_type=artifact.artifact_type,
+        content_hash=content_hash,
         content_for_llm=parsed_content,
         metadata=metadata,
         warnings=warnings,

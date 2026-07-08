@@ -1,0 +1,76 @@
+case_id: cache_optimizer_reword_only_no_progress
+case_type: progress_update
+scenario: reword_only_no_progress
+project_name: cache_optimizer
+description: >
+  Tests whether reworded notes and analysis avoid false semantic progress.
+tags:
+  - synthetic
+  - progress_update
+  - reword_only_no_progress
+  - cache_optimizer
+
+expected_claims:
+  - id: changed_artifact_notes
+    category: progress_source_artifacts
+    target_section: Source Artifact Changes
+    must_mention_all:
+      - notes.md
+    weight: 1
+
+  - id: changed_artifact_benchmark_results
+    category: progress_source_artifacts
+    target_section: Source Artifact Changes
+    must_mention_all:
+      - benchmark_results.md
+    weight: 1
+
+  - id: changed_artifact_failure_analysis
+    category: progress_source_artifacts
+    target_section: Source Artifact Changes
+    must_mention_all:
+      - failure_analysis.md
+    weight: 1
+
+expected_changes:
+  added: []
+  revised: []
+  removed: []
+
+  unchanged:
+    - id: workload_dependent_result_not_progress
+      category: progress_unchanged_findings
+      must_mention_all:
+        - Windowed-LRU
+        - long-context
+      numeric_checks:
+        - id: unchanged_long_context_windowed_lru_p95
+          expected: 97
+          tolerance: 0.5
+          unit_any:
+            - ms
+      should_not_appear_in_sections:
+        - New Confirmed Findings
+        - Removed or Revised Confirmed Findings
+      weight: 1
+
+    - id: prefetch_ablation_not_new
+      category: progress_unchanged_next_actions
+      must_mention_all:
+        - prefetch
+        - ablation
+      should_not_appear_in_sections:
+        - Next Action Changes
+      weight: 1
+
+forbidden_claims:
+  - id: no_scalar_changes_section
+    must_mention_all:
+      - Scalar Changes
+    weight: 1
+
+  - id: no_unsupported_new_finding
+    target_section: New Confirmed Findings
+    must_mention_all:
+      - unsupported
+    weight: 1

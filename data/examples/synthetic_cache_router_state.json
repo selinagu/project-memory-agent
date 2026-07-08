@@ -1,0 +1,33 @@
+{
+  "project_name": "Synthetic Cache Router",
+  "one_sentence_summary": "Evaluate a toy cache-routing policy on synthetic traces and record safe, source-grounded project memory.",
+  "goal": "Demonstrate Project Memory Agent output using a fully synthetic cache-routing example.",
+  "current_stage": "Synthetic fixture complete; ready for documentation examples.",
+  "confirmed_findings": [
+    "The toy router sends small requests to the fast cache path in the synthetic trace.",
+    "The fallback path is triggered when the synthetic request size exceeds the configured threshold."
+  ],
+  "tentative_hypotheses": [
+    "A lower threshold may reduce tail latency on bursty synthetic traces."
+  ],
+  "important_decisions": [
+    "Use synthetic data only for public examples."
+  ],
+  "failed_attempts": [
+    "A previous threshold of 128 units overloaded the fast path in the toy trace."
+  ],
+  "open_questions": [
+    "Which threshold best balances fast-path load and fallback frequency in the synthetic trace?"
+  ],
+  "next_actions": [
+    "Run the synthetic trace with thresholds of 64, 96, and 128 units.",
+    "Record whether fallback frequency changes across the synthetic thresholds."
+  ],
+  "evidence": [
+    {
+      "source": "data/examples/synthetic_cache_router_state.json",
+      "quote_or_summary": "This file is a synthetic ProjectState example intended for public documentation and release testing."
+    }
+  ],
+  "last_updated": null
+}

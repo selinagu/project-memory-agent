@@ -1,0 +1,125 @@
+case_id: robot_policy_eval_conflicting_findings
+case_type: state_reconstruction
+scenario: conflicting_findings
+project_name: robot_policy_eval
+description: >
+  Tests whether later task-specific robot policy results are represented
+  carefully instead of repeating an early overgeneralized finding.
+tags:
+  - synthetic
+  - state_reconstruction
+  - conflicting_findings
+  - robot_policy_eval
+
+expected_claims:
+  - id: goal_action_smoothing
+    category: goal
+    target_field: goal
+    must_mention_all:
+      - action smoothing
+      - pick-and-place
+    weight: 1
+
+  - id: stage_resolving_discrepancy
+    category: current_stage
+    target_field: current_stage
+    must_mention_all:
+      - discrepancy
+    must_mention_any:
+      - later
+      - task-specific
+      - resolving
+    weight: 1
+
+  - id: smoothed_policy_success_68
+    category: confirmed_findings
+    target_field: confirmed_findings
+    must_mention_all:
+      - smoothed
+      - pick-and-place
+      - success
+    numeric_checks:
+      - id: baseline_success
+        expected: 61
+        tolerance: 0
+        unit_any:
+          - "%"
+      - id: smoothed_success
+        expected: 68
+        tolerance: 0
+        unit_any:
+          - "%"
+    required_evidence_sources:
+      - later_results.md
+    weight: 2
+
+  - id: smoothing_hurts_recovery
+    category: confirmed_findings
+    target_field: confirmed_findings
+    must_mention_all:
+      - recovery
+      - failed grasps
+    must_mention_any:
+      - hurts
+      - slower
+      - damped
+    required_evidence_sources:
+      - later_results.md
+    weight: 2
+
+  - id: damped_correction_hypothesis
+    category: tentative_hypotheses
+    target_field: tentative_hypotheses
+    must_mention_all:
+      - smoothing
+      - failed grasps
+    must_mention_any:
+      - damp
+      - damping
+      - damped
+      - correction
+      - correction motions
+      - recovery
+    required_evidence_sources:
+      - later_results.md
+    weight: 1
+
+  - id: approach_phase_next_action
+    category: next_actions
+    target_field: next_actions
+    must_mention_all:
+      - approach phase
+    required_evidence_sources:
+      - next_steps.md
+    weight: 1
+
+  - id: adaptive_after_failure_next_action
+    category: next_actions
+    target_field: next_actions
+    must_mention_all:
+      - adaptive smoothing
+      - failed grasps
+    required_evidence_sources:
+      - next_steps.md
+    weight: 1
+
+forbidden_claims:
+  - id: smoothing_improves_all_tasks_unconditionally
+    must_mention_all:
+      - smoothing
+      - improves all tasks
+    weight: 2
+
+  - id: early_result_more_reliable_false
+    must_mention_all:
+      - early
+      - more reliable
+      - later
+    weight: 2
+
+evidence:
+  allowed_sources:
+    - notes.md
+    - early_results.md
+    - later_results.md
+    - next_steps.md

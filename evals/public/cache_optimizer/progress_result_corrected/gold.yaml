@@ -1,0 +1,86 @@
+case_id: cache_optimizer_progress_result_corrected
+case_type: progress_update
+scenario: result_corrected
+project_name: cache_optimizer
+description: >
+  Tests whether a corrected long-context p95 value is reported as a revision
+  rather than a brand-new finding.
+tags:
+  - synthetic
+  - progress_update
+  - result_corrected
+  - cache_optimizer
+
+expected_claims:
+  - id: changed_artifact_benchmark_results
+    category: progress_source_artifacts
+    target_section: Source Artifact Changes
+    must_mention_all:
+      - benchmark_results.md
+    weight: 1
+
+  - id: changed_artifact_notes
+    category: progress_source_artifacts
+    target_section: Source Artifact Changes
+    must_mention_all:
+      - notes.md
+    weight: 0.5
+
+expected_changes:
+  added: []
+
+  revised:
+    - id: long_context_p95_corrected_92_to_97
+      category: progress_result_correction
+      target_section: Removed or Revised Confirmed Findings
+      must_mention_all:
+        - long-context
+        - Windowed-LRU
+      must_mention_any:
+        - corrected
+        - correction
+        - revised
+        - updated
+        - changed
+      old_must_not_claim:
+        - 92
+      new_must_claim:
+        - 97
+      numeric_checks:
+        - id: corrected_long_context_p95
+          expected: 97
+          tolerance: 0
+          unit_any:
+            - ms
+      weight: 2
+
+  removed: []
+
+  unchanged:
+    - id: small_workload_result_unchanged
+      category: progress_unchanged_findings
+      must_mention_all:
+        - small
+      numeric_checks:
+        - id: unchanged_small_windowed_lru_p95
+          expected: 31
+          tolerance: 0.5
+          unit_any:
+            - ms
+      should_not_appear_in_sections:
+        - New Confirmed Findings
+        - Removed or Revised Confirmed Findings
+      weight: 1
+
+forbidden_claims:
+  - id: correction_not_reported_as_new
+    target_section: New Confirmed Findings
+    must_mention_all:
+      - long-context
+      - 97
+    weight: 2
+
+  - id: no_scalar_changes_section
+    must_mention_all:
+      - Scalar Changes
+    weight: 1

@@ -1,0 +1,64 @@
+case_id: tokenizer_irrelevant_file_changed
+case_type: progress_update
+scenario: irrelevant_file_changed
+project_name: tokenizer_project
+description: >
+  Tests whether an unrelated scratch-file edit is reported as a source
+  artifact change without being treated as project progress.
+tags:
+  - synthetic
+  - progress_update
+  - irrelevant_file_changed
+  - tokenizer
+
+expected_claims:
+  - id: changed_artifact_scratch
+    category: progress_source_artifacts
+    target_section: Source Artifact Changes
+    must_mention_all:
+      - scratch.md
+    weight: 1
+
+expected_changes:
+  added: []
+  revised: []
+  removed: []
+
+  unchanged:
+    - id: tokenizer_goal_not_progress
+      category: progress_unchanged_goal
+      must_mention_all:
+        - BPE tokenizer
+      should_not_appear_in_sections:
+        - New Confirmed Findings
+        - Removed or Revised Confirmed Findings
+        - Next Action Changes
+      weight: 1
+
+    - id: pair_frequency_next_action_not_new
+      category: progress_unchanged_next_actions
+      must_mention_all:
+        - pair-frequency
+      should_not_appear_in_sections:
+        - Next Action Changes
+      weight: 1
+
+forbidden_claims:
+  - id: no_scalar_changes_section
+    must_mention_all:
+      - Scalar Changes
+    weight: 1
+
+  - id: scratch_not_project_next_action
+    target_section: Next Action Changes
+    target_subsection: Added
+    must_mention_any:
+      - scratch
+      - notebook rename
+    weight: 2
+
+  - id: scratch_not_project_progress
+    must_mention_all:
+      - scratch
+      - project progress
+    weight: 2

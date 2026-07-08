@@ -1,0 +1,35 @@
+case_id: memo_self_basic
+case_type: query_memo
+capability: self_memo_grounding
+command:
+  - pma
+  - memo
+  - --type
+  - self
+fixture_output: fixture/stdout.md
+required_sections:
+  - "# Project Memory Memo"
+  - "## Snapshot"
+  - "## What we know"
+  - "## What is still tentative"
+  - "## Blockers / failed attempts"
+  - "## Open questions"
+  - "## Next actions"
+  - "## Evidence pointers"
+  - "## Notes / uncertainty"
+required_includes:
+  - route validator rejects disconnected plans
+  - timeout fallback
+  - project_state.json evidence source planner_log.md
+forbidden_includes:
+  - "# Project Group Update"
+  - deploy the planner
+section_constraints:
+  - section: "## What is still tentative"
+    required_includes:
+      - timeout
+  - section: "## Next actions"
+    required_includes:
+      - timeout fallback
+    forbidden_includes:
+      - deploy the planner

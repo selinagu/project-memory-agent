@@ -1,0 +1,20 @@
+case_id: ask_source_evidence
+case_type: query_memo
+capability: ask_source_marker_evidence
+command:
+  - pma
+  - ask
+  - What evidence supports the confirmed findings?
+fixture_output: fixture/stdout.md
+required_sections:
+  - "Answer:"
+  - "Evidence:"
+  - "Uncertainty / Missing info:"
+required_includes:
+  - combined_notes.md SOURCE bench_notes.md
+  - project_state.json
+  - segmented cache improved bursty-trace hit rate
+forbidden_includes:
+  - combined_notes.md SOURCE unrelated_ideas.md
+  - unrelated future idea
+  - bench_notes.md says

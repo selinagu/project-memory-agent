@@ -1,0 +1,36 @@
+{
+  "project_name": "tokenizer_project",
+  "one_sentence_summary": "Implement and benchmark a BPE tokenizer.",
+  "goal": "Implement and benchmark a BPE tokenizer.",
+  "current_stage": "Implementation and benchmark work exposed a scaling bottleneck; profiling is next.",
+  "confirmed_findings": [
+    "Runtime and memory increase greatly with a larger corpus and larger vocabulary.",
+    "The special token decode bug involving byte sequences was fixed."
+  ],
+  "tentative_hypotheses": [
+    "Broadly recomputed pair-frequency updates may be the bottleneck."
+  ],
+  "important_decisions": [],
+  "failed_attempts": [],
+  "open_questions": [
+    "Can merge updates be made incremental?"
+  ],
+  "next_actions": [
+    "Profile pair-frequency updates."
+  ],
+  "evidence": [
+    {
+      "source": "timing_results.md",
+      "quote_or_summary": "Timing results record runtime and memory scaling."
+    },
+    {
+      "source": "bug_notes.md",
+      "quote_or_summary": "Bug notes record the fixed special-token decode issue."
+    },
+    {
+      "source": "next_steps.md",
+      "quote_or_summary": "Next steps record pair-frequency profiling."
+    }
+  ],
+  "last_updated": null
+}

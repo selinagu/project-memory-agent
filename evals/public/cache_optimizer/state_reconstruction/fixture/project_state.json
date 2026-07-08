@@ -1,0 +1,35 @@
+{
+  "project_name": "cache_optimizer",
+  "one_sentence_summary": "Evaluate Windowed-LRU for a key-value cache across workloads.",
+  "goal": "Reduce p95 latency in a key-value cache using Windowed-LRU.",
+  "current_stage": "Initial implementation complete; reviewing benchmark interpretation.",
+  "confirmed_findings": [
+    "Windowed-LRU improves the small workload but regresses on the long-context workload, so its latency effect is workload-dependent."
+  ],
+  "tentative_hypotheses": [
+    "Cache churn may explain the long-context regression."
+  ],
+  "important_decisions": [],
+  "failed_attempts": [],
+  "open_questions": [
+    "Is cache churn or prefetch behavior responsible for the regression?"
+  ],
+  "next_actions": [
+    "Run a prefetch-disabled ablation."
+  ],
+  "evidence": [
+    {
+      "source": "benchmark_results.md",
+      "quote_or_summary": "Benchmark results show workload-dependent latency."
+    },
+    {
+      "source": "failure_analysis.md",
+      "quote_or_summary": "Failure analysis proposes cache churn as a hypothesis."
+    },
+    {
+      "source": "next_steps.md",
+      "quote_or_summary": "Next steps record the prefetch-disabled ablation."
+    }
+  ],
+  "last_updated": null
+}

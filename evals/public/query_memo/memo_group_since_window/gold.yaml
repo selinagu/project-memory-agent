@@ -1,0 +1,44 @@
+case_id: memo_group_since_window
+case_type: query_memo
+capability: group_update_since_window
+command:
+  - pma
+  - memo
+  - --type
+  - group-update
+  - --since
+  - "2026-07-01"
+fixture_output: fixture/stdout.md
+required_sections:
+  - "## Update window"
+  - "## Progress this period"
+  - "## Planned next actions"
+required_includes:
+  - "Requested since date: 2026-07-01"
+  - "2026-07-01"
+  - "2026-07-02_120000"
+  - bad-run-name
+  - excluded
+  - rerun parser cleanup checks
+ordered_includes:
+  - "2026-07-01"
+  - "2026-07-02_120000"
+section_constraints:
+  - section: "## Update window"
+    required_includes:
+      - "Requested since date: 2026-07-01"
+      - "2026-07-01"
+      - "2026-07-02_120000"
+      - bad-run-name
+      - excluded
+  - section: "## Progress this period"
+    required_includes:
+      - "2026-07-01"
+      - "2026-07-02_120000"
+    forbidden_includes:
+      - "2026-06-30"
+  - section: "## Planned next actions"
+    required_includes:
+      - rerun parser cleanup checks
+    forbidden_includes:
+      - remove every compatibility shim

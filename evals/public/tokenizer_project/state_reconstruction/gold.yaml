@@ -1,0 +1,121 @@
+case_id: tokenizer_state_reconstruction
+case_type: state_reconstruction
+scenario: clean_state_reconstruction
+project_name: tokenizer_project
+description: >
+  Tests whether the agent reconstructs the tokenizer project state, including
+  timing scale, memory scale, a fixed decode bug, and next profiling steps.
+tags:
+  - synthetic
+  - state_reconstruction
+  - tokenizer
+
+expected_claims:
+  - id: goal_bpe_tokenizer
+    category: goal
+    target_field: goal
+    must_mention_all:
+      - BPE tokenizer
+    must_mention_any:
+      - implement
+      - benchmark
+    weight: 1
+
+  - id: stage_scaling_bottleneck
+    category: current_stage
+    target_field: current_stage
+    must_mention_all:
+      - implementation
+      - benchmark
+    must_mention_any:
+      - scaling bottleneck
+      - profiling
+      - exposed
+    weight: 1
+
+  - id: timing_scaling_finding
+    category: confirmed_findings
+    target_field: confirmed_findings
+    must_mention_all:
+      - runtime
+      - memory
+    must_mention_any:
+      - larger corpus
+      - larger vocabulary
+      - larger corpus/vocab
+      - scale
+      - increases
+      - greatly
+    required_evidence_sources:
+      - timing_results.md
+    weight: 2
+
+  - id: special_token_decode_fixed
+    category: confirmed_findings
+    target_field: confirmed_findings
+    must_mention_all:
+      - special token
+      - fixed
+    must_mention_any:
+      - byte sequences
+      - decode
+    required_evidence_sources:
+      - bug_notes.md
+    weight: 2
+
+  - id: pair_update_bottleneck_hypothesis
+    category: tentative_hypotheses
+    target_field: tentative_hypotheses
+    must_mention_all:
+      - pair
+      - update
+    must_mention_any:
+      - recomputed
+      - bottleneck
+      - broadly
+    weight: 1
+
+  - id: incremental_merge_open_question
+    category: open_questions
+    target_field: open_questions
+    must_mention_all:
+      - incremental
+      - merge
+    weight: 1
+
+  - id: profile_pair_frequency_next_action
+    category: next_actions
+    target_field: next_actions
+    must_mention_all:
+      - profile
+      - pair-frequency
+    required_evidence_sources:
+      - next_steps.md
+    weight: 1
+
+forbidden_claims:
+  - id: tokenizer_fully_optimized_false
+    must_mention_all:
+      - tokenizer
+      - fully optimized
+    weight: 2
+
+  - id: webtext_less_memory_false
+    must_mention_all:
+      - WebText
+      - less memory
+      - TinyStories
+    weight: 2
+
+  - id: special_token_bug_unresolved_false
+    must_mention_all:
+      - special token
+      - unresolved
+    weight: 2
+
+evidence:
+  allowed_sources:
+    - notes.md
+    - timing_results.md
+    - bug_notes.md
+    - next_steps.md

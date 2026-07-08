@@ -1,0 +1,16 @@
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+outputs/
+.project_memory/
+evals/outputs/
+evals/private/
+evals/private_outputs/
+data/raw/
+data/projects/
+# Local agent/tool workspaces
+.agents/
+.codex/

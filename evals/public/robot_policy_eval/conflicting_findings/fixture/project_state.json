@@ -1,0 +1,31 @@
+{
+  "project_name": "robot_policy_eval",
+  "one_sentence_summary": "Resolve task-specific effects of action smoothing.",
+  "goal": "Evaluate action smoothing for pick-and-place behavior cloning.",
+  "current_stage": "Resolving the discrepancy between early and later task-specific results.",
+  "confirmed_findings": [
+    "On pick-and-place, baseline success was 61% and smoothed-policy success was 68%.",
+    "Smoothing hurts recovery from failed grasps because correction motions are slower and damped."
+  ],
+  "tentative_hypotheses": [
+    "Smoothing may damp correction motions after failed grasps and slow recovery."
+  ],
+  "important_decisions": [],
+  "failed_attempts": [],
+  "open_questions": [],
+  "next_actions": [
+    "Evaluate smoothing only during the approach phase.",
+    "Test adaptive smoothing after failed grasps."
+  ],
+  "evidence": [
+    {
+      "source": "later_results.md",
+      "quote_or_summary": "Later task-specific results report success rates and recovery behavior."
+    },
+    {
+      "source": "next_steps.md",
+      "quote_or_summary": "Next steps record approach-phase and adaptive smoothing tests."
+    }
+  ],
+  "last_updated": null
+}

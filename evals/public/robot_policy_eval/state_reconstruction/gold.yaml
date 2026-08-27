@@ -1,0 +1,129 @@
+case_id: robot_policy_eval_state_reconstruction
+case_type: state_reconstruction
+scenario: clean_state_reconstruction
+project_name: robot_policy_eval
+description: >
+  Tests whether the agent reconstructs a robot policy evaluation state with
+  success-rate results, recovery tradeoffs, and next actions.
+tags:
+  - synthetic
+  - state_reconstruction
+  - robot_policy_eval
+
+expected_claims:
+  - id: goal_action_smoothing
+    category: goal
+    target_field: goal
+    must_mention_all:
+      - action smoothing
+      - pick-and-place
+    must_mention_any:
+      - success
+      - behavior cloning
+    weight: 1
+
+  - id: stage_policy_variant_comparison
+    category: current_stage
+    target_field: current_stage
+    must_mention_all:
+      - comparing
+    must_mention_any:
+      - baseline
+      - smoothed
+      - policy variants
+    weight: 1
+
+  - id: baseline_and_smoothed_success_rates
+    category: confirmed_findings
+    target_field: confirmed_findings
+    must_mention_all:
+      - baseline
+      - smoothed
+      - success
+    numeric_checks:
+      - id: baseline_success
+        expected: 61
+        tolerance: 0
+        unit_any:
+          - "%"
+      - id: smoothed_success
+        expected: 68
+        tolerance: 0
+        unit_any:
+          - "%"
+    required_evidence_sources:
+      - experiment_log.md
+    weight: 2
+
+  - id: smoothing_hurts_recovery
+    category: confirmed_findings
+    target_field: confirmed_findings
+    must_mention_all:
+      - smoothed
+      - recovery
+      - failed grasps
+    required_evidence_sources:
+      - experiment_log.md
+      - failure_analysis.md
+    weight: 2
+
+  - id: smoothing_stability_recovery_tradeoff
+    category: confirmed_findings
+    target_field: confirmed_findings
+    must_mention_all:
+      - smoothing
+    must_mention_any:
+      - stable
+      - stability
+      - rapid correction
+      - recovery
+      - failed grasps
+      - trade-off
+    required_evidence_sources:
+      - failure_analysis.md
+    weight: 1
+
+  - id: adaptive_smoothing_open_question
+    category: open_questions
+    target_field: open_questions
+    must_mention_all:
+      - adaptive smoothing
+    must_mention_any:
+      - stability
+      - recovery
+    weight: 1
+
+  - id: approach_phase_next_action
+    category: next_actions
+    target_field: next_actions
+    must_mention_all:
+      - approach phase
+    must_mention_any:
+      - smoothing
+      - evaluate
+    required_evidence_sources:
+      - next_steps.md
+    weight: 1
+
+forbidden_claims:
+  - id: smoothing_improves_all_tasks_unconditionally
+    must_mention_all:
+      - smoothing
+    must_mention_any:
+      - improves all tasks
+      - unconditionally
+    weight: 2
+
+  - id: recovery_faster_with_smoothing_false
+    must_mention_all:
+      - recovery
+      - faster
+      - smoothing
+    weight: 2
+
+evidence:
+  allowed_sources:
+    - notes.md
+    - experiment_log.md
+    - failure_analysis.md
+    - next_steps.md

@@ -4,6 +4,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from artifacts import ArtifactIndex, ArtifactRecord
+from scanner_config import (
+    ScannerConfig,
+    ScannerConfigError,
+    load_scanner_config,
+    matches_any,
+    normalize_relative_path,
+)
+from project_layout import CheckpointLayoutError, generated_output_prefixes, resolve_checkpoint_layout
 
 
 SUPPORTED_EXTENSIONS = {
@@ -17,15 +25,19 @@ SUPPORTED_EXTENSIONS = {
 
 DEFAULT_IGNORE_DIRS = {
     ".git",
+    ".project_memory",
     "__pycache__",
     ".pytest_cache",
     ".mypy_cache",
     ".ruff_cache",
     ".venv",
     "venv",
-    "env",
     "node_modules",
-    "outputs",
+}
+
+
+SENSITIVE_IGNORE_FILES = {
+    ".env",
 }
 
 
@@ -34,7 +46,13 @@ def detect_artifact_type(path: Path) -> str:
 
 
 def should_ignore(path: Path) -> bool:
-    return any(part in DEFAULT_IGNORE_DIRS for part in path.parts)
+    if path.name in SENSITIVE_IGNORE_FILES:
+        return True
+
+    return any(
+        part in DEFAULT_IGNORE_DIRS or part.endswith(".egg-info")
+        for part in path.parts
+    )
 
 
 def read_preview(path: Path, max_chars: int = 500) -> str | None:
@@ -55,8 +73,21 @@ def read_preview(path: Path, max_chars: int = 500) -> str | None:
     return text[:max_chars]
 
 
-def scan_project(project_dir: Path) -> ArtifactIndex:
+def scan_project(
+    project_dir: Path,
+    scanner_config: ScannerConfig | None = None,
+    *,
+    checkpoint_root: Path | None = None,
+) -> ArtifactIndex:
     project_dir = project_dir.resolve()
+    ignored_generated_prefixes = (
+        generated_output_prefixes(project_dir, checkpoint_root)
+        if checkpoint_root is not None
+        else ()
+    )
+
+    if scanner_config is None:
+        scanner_config = load_scanner_config(project_dir)
 
     records: list[ArtifactRecord] = []
 
@@ -69,8 +100,24 @@ def scan_project(project_dir: Path) -> ArtifactIndex:
         if should_ignore(relative_path):
             continue
 
+        relative_posix = relative_path.as_posix()
+        if any(
+            relative_posix == prefix or relative_posix.startswith(f"{prefix}/")
+            for prefix in ignored_generated_prefixes
+        ):
+            continue
+
         artifact_type = detect_artifact_type(path)
         if artifact_type == "unknown":
+            continue
+
+        match_path = normalize_relative_path(relative_path)
+        if (
+            scanner_config.include_patterns
+            and not matches_any(match_path, scanner_config.include_patterns)
+        ):
+            continue
+        if matches_any(match_path, scanner_config.exclude_patterns):
             continue
 
         stat = path.stat()
@@ -82,7 +129,7 @@ def scan_project(project_dir: Path) -> ArtifactIndex:
         preview = read_preview(path)
 
         record = ArtifactRecord(
-            path=str(relative_path),
+            path=match_path,
             artifact_type=artifact_type,
             size_bytes=stat.st_size,
             modified_time=modified_time,
@@ -97,7 +144,7 @@ def scan_project(project_dir: Path) -> ArtifactIndex:
     )
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--project-dir", required=True)
     parser.add_argument("--output", required=True)
@@ -106,7 +153,14 @@ def main():
     project_dir = Path(args.project_dir)
     output_path = Path(args.output)
 
-    index = scan_project(project_dir)
+    try:
+        layout = resolve_checkpoint_layout(project_dir)
+        index = scan_project(
+            project_dir,
+            checkpoint_root=layout.checkpoint_root,
+        )
+    except (ScannerConfigError, CheckpointLayoutError) as exc:
+        parser.error(str(exc))
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(

@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "project-memory-agent"
+version = "0.1.1"
+description = "Build and query structured project-memory checkpoints."
+requires-python = ">=3.10"
+dependencies = [
+  "openai",
+  "pydantic",
+  "python-dotenv",
+  "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+eval = ["PyYAML"]
+dev = ["pytest", "PyYAML"]
+
+[project.scripts]
+pma = "pma:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = [
+  "artifacts",
+  "brief",
+  "checkpoint",
+  "diff_states",
+  "extract_state",
+  "freshness",
+  "git_context",
+  "memo",
+  "parsers",
+  "pma",
+  "prompts",
+  "progress_window",
+  "project_layout",
+  "query",
+  "render_card",
+  "render_checkpoint_summary",
+  "scan_project",
+  "scanner_config",
+  "schemas",
+  "semantic_diff",
+  "source_lookup",
+  "status_note",
+  "validate_state",
+]

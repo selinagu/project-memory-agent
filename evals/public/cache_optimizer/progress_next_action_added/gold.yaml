@@ -1,0 +1,78 @@
+case_id: cache_optimizer_progress_next_action_added
+case_type: progress_update
+scenario: next_action_added
+project_name: cache_optimizer
+description: >
+  Tests whether adding one next action reports a next-action change without
+  treating unchanged benchmark findings as new progress.
+tags:
+  - synthetic
+  - progress_update
+  - next_action_added
+  - cache_optimizer
+
+expected_claims:
+  - id: changed_artifact_next_steps
+    category: progress_source_artifacts
+    target_section: Source Artifact Changes
+    must_mention_all:
+      - next_steps.md
+    weight: 1
+
+expected_changes:
+  added:
+    - id: measure_eviction_churn_next_action
+      category: progress_next_actions
+      target_section: Next Action Changes
+      target_subsection: Added
+      must_mention_all:
+        - eviction churn
+      must_mention_any:
+        - measure
+        - counters
+        - long-context
+      weight: 1.5
+
+  revised: []
+
+  removed: []
+
+  unchanged:
+    - id: long_context_regression_unchanged
+      category: progress_unchanged_findings
+      must_mention_all:
+        - Windowed-LRU
+        - long-context
+      numeric_checks:
+        - id: unchanged_long_context_windowed_lru_p95
+          expected: 97
+          tolerance: 0.5
+          unit_any:
+            - ms
+      should_not_appear_in_sections:
+        - New Confirmed Findings
+        - Removed or Revised Confirmed Findings
+      weight: 1
+
+    - id: prefetch_disabled_ablation_not_readded
+      category: progress_unchanged_next_actions
+      must_mention_all:
+        - prefetch
+        - disabled
+      should_not_appear_in_sections:
+        - Next Action Changes
+      weight: 1
+
+forbidden_claims:
+  - id: no_scalar_changes_section
+    must_mention_all:
+      - Scalar Changes
+    weight: 1
+
+  - id: no_confirmed_finding_removed_due_to_paraphrase
+    target_section: Removed or Revised Confirmed Findings
+    must_mention_any:
+      - Windowed-LRU
+      - small workload
+      - long-context
+    weight: 1

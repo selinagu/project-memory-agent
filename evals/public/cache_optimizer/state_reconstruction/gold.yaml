@@ -1,0 +1,112 @@
+case_id: cache_optimizer_state_reconstruction
+case_type: state_reconstruction
+scenario: clean_state_reconstruction
+project_name: cache_optimizer
+description: >
+  Tests whether the agent reconstructs the cache optimizer state from
+  synthetic notes, benchmark results, failure analysis, and next steps.
+tags:
+  - synthetic
+  - state_reconstruction
+  - cache_optimizer
+
+expected_claims:
+  - id: goal_windowed_lru_latency
+    category: goal
+    target_field: goal
+    must_mention_all:
+      - p95 latency
+      - key-value cache
+      - Windowed-LRU
+    weight: 1
+
+  - id: stage_benchmark_interpretation
+    category: current_stage
+    target_field: current_stage
+    must_mention_all:
+      - benchmark
+    must_mention_any:
+      - interpretation
+      - initial implementation
+      - reviewing
+    weight: 1
+
+  - id: workload_dependent_latency_result
+    category: confirmed_findings
+    target_field: confirmed_findings
+    must_mention_all:
+      - Windowed-LRU
+      - small
+      - long-context
+    must_mention_any:
+      - improves small
+      - small workload
+      - regresses
+      - worse
+      - hurts
+      - workload-dependent
+    required_evidence_sources:
+      - benchmark_results.md
+    weight: 2
+
+  - id: cache_churn_hypothesis
+    category: tentative_hypotheses
+    target_field: tentative_hypotheses
+    must_mention_all:
+      - cache churn
+    must_mention_any:
+      - regression
+      - long-context
+    required_evidence_sources:
+      - failure_analysis.md
+    weight: 1.5
+
+  - id: churn_vs_prefetch_open_question
+    category: open_questions
+    target_field: open_questions
+    must_mention_all:
+      - cache churn
+      - prefetch
+    weight: 1
+
+  - id: prefetch_disabled_ablation_next_action
+    category: next_actions
+    target_field: next_actions
+    must_mention_all:
+      - prefetch
+      - disabled
+    must_mention_any:
+      - ablation
+      - run
+    required_evidence_sources:
+      - next_steps.md
+    weight: 1
+
+forbidden_claims:
+  - id: windowed_lru_universal_improvement_false
+    must_mention_all:
+      - Windowed-LRU
+    must_mention_any:
+      - improves all workloads
+      - universal improvement
+    weight: 2
+
+  - id: long_context_improved_false
+    must_mention_all:
+      - long-context
+      - improved
+    weight: 2
+
+  - id: prefetch_confirmed_root_cause_false
+    must_mention_all:
+      - prefetch
+      - confirmed
+      - root cause
+    weight: 1
+
+evidence:
+  allowed_sources:
+    - notes.md
+    - benchmark_results.md
+    - failure_analysis.md
+    - next_steps.md

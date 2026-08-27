@@ -1,0 +1,29 @@
+case_id: memo_group_latest
+case_type: query_memo
+capability: group_update_latest_only
+command:
+  - pma
+  - memo
+  - --type
+  - group-update
+fixture_output: fixture/stdout.md
+required_sections:
+  - "# Project Group Update"
+  - "## Update basis"
+  - "## Progress since last checkpoint"
+  - "## Current status"
+  - "## Planned next actions"
+required_includes:
+  - latest checkpoint memory
+  - does not aggregate multiple history runs
+  - deterministic retry
+  - run the retry suite on the second synthetic parser
+forbidden_includes:
+  - multi-day window
+  - rewrite the harness
+section_constraints:
+  - section: "## Planned next actions"
+    required_includes:
+      - run the retry suite on the second synthetic parser
+    forbidden_includes:
+      - rewrite the harness

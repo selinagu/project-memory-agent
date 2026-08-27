@@ -1,0 +1,39 @@
+case_id: memo_group_last_window
+case_type: query_memo
+capability: group_update_last_n_window
+command:
+  - pma
+  - memo
+  - --type
+  - group-update
+  - --last
+  - "2"
+fixture_output: fixture/stdout.md
+required_sections:
+  - "# Project Group Update"
+  - "## Update window"
+  - "## Progress this period"
+  - "## Planned next actions"
+required_includes:
+  - "2026-07-02"
+  - "2026-07-03"
+  - run stability check on new traces
+ordered_includes:
+  - "2026-07-02"
+  - "2026-07-03"
+section_constraints:
+  - section: "## Update window"
+    required_includes:
+      - "2026-07-02"
+      - "2026-07-03"
+  - section: "## Progress this period"
+    required_includes:
+      - "2026-07-02"
+      - "2026-07-03"
+    forbidden_includes:
+      - "2026-07-01"
+  - section: "## Planned next actions"
+    required_includes:
+      - run stability check on new traces
+    forbidden_includes:
+      - try a discarded visualization

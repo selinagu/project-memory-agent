@@ -1,0 +1,13 @@
+[scanner]
+exclude = [
+  "evals/private/**",
+  "evals/private_outputs/**",
+  "evals/outputs/**",
+  "evals/public/**/input/**",
+  "evals/public/**/fixture/**",
+  "evals/public/**/v1/**",
+  "evals/public/**/v2/**",
+  "data/raw/**",
+  "data/projects/**",
+  "outputs/**",
+]

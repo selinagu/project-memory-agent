@@ -3,6 +3,7 @@ import hashlib
 import io
 import json
 import math
+import re
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,23 @@ from artifacts import (
     ArtifactRecord,
     ParsedArtifact,
     ParsedArtifactBundle,
+)
+
+
+_MARKDOWN_HEADING_RE = re.compile(
+    r"^[ \t]{0,3}#{1,6}(?:[ \t]+|$)"
+)
+
+LOG_HEAD_LINES = 20
+LOG_TAIL_LINES = 40
+
+LOG_DIAGNOSTIC_TERMS = (
+    "error",
+    "warning",
+    "exception",
+    "traceback",
+    "failed",
+    "fatal",
 )
 
 
@@ -32,69 +50,76 @@ def _parse_markdown(content: str) -> tuple[str, dict[str, Any], list[str]]:
     heading_count = sum(
         1
         for line in stripped.splitlines()
-        if line.lstrip().startswith("#")
+        if _MARKDOWN_HEADING_RE.match(line)
     )
     return stripped, {"heading_count": heading_count}, []
 
 
-def _parse_log(content: str) -> tuple[str, dict[str, Any], list[str]]:
+def _parse_log(
+    content: str,
+) -> tuple[str, dict[str, Any], list[str]]:
     lines = content.splitlines()
-    key_terms = (
-        "error",
-        "warning",
-        "exception",
-        "traceback",
-        "failed",
-        "tok/s",
-        "loss",
-        "accuracy",
-        "acc",
-        "reward",
-        "latency",
-        "throughput",
-        "accept",
-        "reject",
-        "time",
-        "seconds",
-    )
 
-    key_lines: list[str] = []
-    seen_lines: set[str] = set()
+    head_lines = lines[:LOG_HEAD_LINES]
+    tail_start = max(LOG_HEAD_LINES, len(lines) - LOG_TAIL_LINES)
+    tail_lines = lines[tail_start:]
+
+    diagnostic_lines: list[str] = []
+    seen_lines: set[str] = set(head_lines + tail_lines)
+
     for line in lines:
-        if any(term in line.lower() for term in key_terms) and line not in seen_lines:
-            key_lines.append(line)
+        lowered = line.lower()
+        if (
+            any(term in lowered for term in LOG_DIAGNOSTIC_TERMS)
+            and line not in seen_lines
+        ):
+            diagnostic_lines.append(line)
             seen_lines.add(line)
 
-    tail_lines: list[str] = []
-    for line in lines[-30:]:
-        if line not in seen_lines:
-            tail_lines.append(line)
-            seen_lines.add(line)
-
-    kept_line_count = len(key_lines) + len(tail_lines)
+    kept_line_count = (
+        len(head_lines)
+        + len(tail_lines)
+        + len(diagnostic_lines)
+    )
     truncated = kept_line_count < len(lines)
 
     sections = [
         "# Log Summary",
         f"Total lines: {len(lines)}",
         "",
-        "## Key Lines",
-        "\n".join(key_lines) if key_lines else "[No key lines found.]",
+        f"## First {LOG_HEAD_LINES} Lines",
+        "\n".join(head_lines) if head_lines else "[Log is empty.]",
         "",
-        "## Last 30 Lines",
-        "\n".join(tail_lines) if tail_lines else "[No additional tail lines.]",
+        "## Diagnostic Lines",
+        (
+            "\n".join(diagnostic_lines)
+            if diagnostic_lines
+            else "[No diagnostic lines found.]"
+        ),
+        "",
+        f"## Last {LOG_TAIL_LINES} Lines",
+        (
+            "\n".join(tail_lines)
+            if tail_lines
+            else "[No additional tail lines.]"
+        ),
     ]
+
     metadata = {
         "line_count": len(lines),
-        "key_line_count": len(key_lines),
+        "head_line_count": len(head_lines),
         "tail_line_count": len(tail_lines),
+        "diagnostic_line_count": len(diagnostic_lines),
         "truncated": truncated,
+        "summary_strategy": "head_diagnostics_tail",
     }
+
     warnings = (
-        ["Log was summarized instead of being fully included."]
+        ["Log was summarized using head, diagnostic, and tail lines."]
         if truncated
         else []
     )
+
     return "\n".join(sections), metadata, warnings
 
 
@@ -168,9 +193,11 @@ def _parse_csv(content: str) -> tuple[str, dict[str, Any], list[str]]:
     else:
         table_lines = render_table(body)
 
-    numeric_summaries: list[str] = []
+    numeric_ranges: list[str] = []
+
     for column_index in range(column_count):
         numeric_values: list[float] = []
+
         for row in body:
             value = row[column_index].strip()
             if not value:
@@ -185,26 +212,30 @@ def _parse_csv(content: str) -> tuple[str, dict[str, Any], list[str]]:
                 numeric_values.append(numeric_value)
 
         if numeric_values:
-            column_name = header[column_index] or f"Column {column_index + 1}"
-            mean = sum(numeric_values) / len(numeric_values)
-            numeric_summaries.append(
-                f"- {column_name}: min={min(numeric_values):.6g}, "
-                f"max={max(numeric_values):.6g}, mean={mean:.6g}"
+            column_name = (
+                header[column_index]
+                or f"Column {column_index + 1}"
+            )
+            numeric_ranges.append(
+                f"- {column_name}: "
+                f"numeric_count={len(numeric_values)}, "
+                f"min={min(numeric_values):.6g}, "
+                f"max={max(numeric_values):.6g}"
             )
 
     summary_lines = [
         "",
-        "## Numeric Column Summary",
+        "## Basic Numeric Range Summary",
         *(
-            numeric_summaries
-            if numeric_summaries
+            numeric_ranges
+            if numeric_ranges
             else ["[No numeric columns found.]"]
         ),
     ]
 
     if truncated:
         warnings.append(
-            "Large CSV artifact summarized with head/tail rows and numeric column statistics."
+            "Large CSV artifact summarized with head/tail rows and basic numeric ranges."
         )
 
     metadata = {

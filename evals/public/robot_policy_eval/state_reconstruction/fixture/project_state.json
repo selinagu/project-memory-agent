@@ -1,0 +1,35 @@
+{
+  "project_name": "robot_policy_eval",
+  "one_sentence_summary": "Compare baseline and smoothed robot policies.",
+  "goal": "Evaluate whether action smoothing improves pick-and-place behavior-cloning success.",
+  "current_stage": "Comparing baseline and smoothed policy variants.",
+  "confirmed_findings": [
+    "Baseline success was 61% and smoothed-policy success was 68%.",
+    "The smoothed policy has slower recovery from failed grasps.",
+    "Smoothing creates a stability versus rapid-correction trade-off during recovery."
+  ],
+  "tentative_hypotheses": [],
+  "important_decisions": [],
+  "failed_attempts": [],
+  "open_questions": [
+    "Can adaptive smoothing preserve stability while improving recovery?"
+  ],
+  "next_actions": [
+    "Evaluate smoothing only during the approach phase."
+  ],
+  "evidence": [
+    {
+      "source": "experiment_log.md",
+      "quote_or_summary": "The experiment log records success rates and failed-grasp recovery."
+    },
+    {
+      "source": "failure_analysis.md",
+      "quote_or_summary": "Failure analysis describes the stability and recovery trade-off."
+    },
+    {
+      "source": "next_steps.md",
+      "quote_or_summary": "Next steps record the approach-phase evaluation."
+    }
+  ],
+  "last_updated": null
+}

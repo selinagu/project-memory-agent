@@ -1,0 +1,20 @@
+case_id: ask_schema_basic
+case_type: query_memo
+capability: ask_schema_field_boundaries
+command:
+  - pma
+  - ask
+  - What are the confirmed findings?
+fixture_output: fixture/stdout.md
+required_sections:
+  - "Answer:"
+  - "Evidence:"
+  - "Uncertainty / Missing info:"
+required_includes:
+  - LRU baseline is stable on repeated traces
+  - segmented cache improves hit rate on bursty traces
+  - project_state.json
+forbidden_includes:
+  - improvement may come from protecting hot keys during bursts
+  - run longer-trace benchmark
+  - invent

@@ -1,0 +1,42 @@
+case_id: memo_group_conflict_correction
+case_type: query_memo
+capability: group_update_conflict_correction
+command:
+  - pma
+  - memo
+  - --type
+  - group-update
+  - --last
+  - "2"
+fixture_output: fixture/stdout.md
+required_sections:
+  - "## Progress this period"
+  - "## Confirmed findings"
+  - "## Tentative hypotheses / interpretation"
+  - "## Planned next actions"
+required_includes:
+  - 15%
+  - 4%
+  - corrected
+  - validate the corrected benchmark on a larger workload
+section_constraints:
+  - section: "## Progress this period"
+    required_includes:
+      - 15%
+      - 4%
+      - corrected
+  - section: "## Confirmed findings"
+    required_includes:
+      - 4%
+      - excluding setup overhead
+    forbidden_includes:
+      - 15%
+  - section: "## Tentative hypotheses / interpretation"
+    required_includes:
+      - Tentative / unverified
+      - fewer cache misses
+  - section: "## Planned next actions"
+    required_includes:
+      - validate the corrected benchmark on a larger workload
+    forbidden_includes:
+      - publish the 15% result

@@ -1,0 +1,21 @@
+case_id: no_latest_todo_template
+case_type: status_note
+capability: missing_latest_template
+command: [pma, status-note, --from-latest]
+expected_exit_code: 0
+required_sections:
+  - "## Project overview"
+  - "## Current stage"
+  - "## Recent progress"
+  - "## Confirmed findings"
+  - "## Uncertainty and unresolved items"
+  - "## Current next actions"
+  - "## Validation / evidence"
+  - "## Notes for next checkpoint"
+required_includes:
+  - "TODO: Describe the project"
+  - "No latest checkpoint found at .project_memory/latest."
+  - "Missing latest checkpoint files"
+forbidden_includes:
+  - "/tmp/"
+  - "Traceback"

@@ -1,0 +1,13 @@
+case_id: canonical_named_layout
+case_type: status_note
+capability: canonical_layout_resolution
+command: [pma, status-note, --from-latest, --base-output-dir, memory, --project-name, status-lab]
+expected_exit_code: 0
+required_includes:
+  - "Project: Named Layout Lab"
+  - "Verified named internal checkpoint lookup."
+  - "Keep logical path labels privacy-safe."
+forbidden_includes:
+  - "/tmp/"
+  - "external-repository-path"
+  - "Traceback"

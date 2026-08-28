@@ -203,7 +203,22 @@ class StatusNoteTests(unittest.TestCase):
                 latest_dir=external_latest,
             )
 
-            self.assertIn("- Project: Status Lab", note)
+        self.assertIn("- Project: Status Lab", note)
+
+    def test_missing_external_latest_uses_privacy_safe_label(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir = Path(temp_dir) / "project"
+            external_latest = Path(temp_dir) / "external-memory" / "latest"
+            project_dir.mkdir()
+
+            note = build_status_note(
+                project_dir,
+                from_latest=True,
+                latest_dir=external_latest,
+            )
+
+        self.assertIn("No latest checkpoint found at external.", note)
+        self.assertNotIn(str(external_latest), note)
 
     def test_cli_prints_preview_without_writing(self):
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -1,0 +1,14 @@
+{
+  "project_name": "Named Layout Lab",
+  "one_sentence_summary": "Exercise named internal checkpoint resolution.",
+  "goal": "Keep all consumers on the canonical resolver.",
+  "current_stage": "Checking named layout compatibility.",
+  "confirmed_findings": ["Named internal latest memory was resolved."],
+  "tentative_hypotheses": [],
+  "important_decisions": [],
+  "failed_attempts": [],
+  "open_questions": [],
+  "next_actions": ["Keep logical path labels privacy-safe."],
+  "evidence": [],
+  "last_updated": null
+}

@@ -48,12 +48,13 @@ def load_latest_memory(
     project_name: str | None = None,
     base_output_dir: Path | None = None,
 ) -> LatestMemory:
-    latest_dir = resolve_latest_dir(
+    layout = resolve_checkpoint_layout(
         project_dir,
-        latest_dir,
+        latest_dir=latest_dir,
         project_name=project_name,
         base_output_dir=base_output_dir,
     )
+    latest_dir = layout.latest_dir
     expected = (
         "project_state.json",
         "checkpoint_summary.md",
@@ -63,7 +64,7 @@ def load_latest_memory(
     if not latest_dir.is_dir():
         return LatestMemory(
             missing=expected,
-            errors=(f"No latest checkpoint found at {latest_dir}.",),
+            errors=(f"No latest checkpoint found at {layout.latest_label()}.",),
         )
 
     missing: list[str] = []

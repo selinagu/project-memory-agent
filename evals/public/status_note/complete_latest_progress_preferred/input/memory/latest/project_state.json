@@ -1,0 +1,19 @@
+{
+  "project_name": "Status Lab",
+  "one_sentence_summary": "Keep project status checkpoint-friendly.",
+  "goal": "Preserve supported milestones before checkpointing.",
+  "current_stage": "Validating deterministic status notes.",
+  "confirmed_findings": ["Progress notes are the preferred recent-progress source."],
+  "tentative_hypotheses": ["Short drafts may improve project re-entry."],
+  "important_decisions": [],
+  "failed_attempts": ["A summary-only draft omitted a correction."],
+  "open_questions": ["Should teams customize the template?"],
+  "next_actions": ["Run the public status-note eval."],
+  "evidence": [
+    {
+      "source": "PROJECT_STATUS.md",
+      "quote_or_summary": "The deterministic workflow is documented."
+    }
+  ],
+  "last_updated": null
+}

@@ -1,0 +1,13 @@
+case_id: force_overwrites
+case_type: status_note
+capability: forced_write
+command: [pma, status-note, --write, --force]
+expected_exit_code: 0
+required_includes:
+  - "Wrote status note:"
+forbidden_includes:
+  - "Traceback"
+file_required_includes:
+  PROJECT_STATUS.md:
+    - "# Project Status"
+    - "TODO: Describe the project"

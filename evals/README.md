@@ -23,6 +23,8 @@ project cases belong under ignored paths such as `evals/private/` and
 - `query_memo`: evaluate `pma ask` and `pma memo` behavior, including
   schema-aware answers, SOURCE citation discipline, self memos, group updates,
   windows, and correction/supersession handling.
+- `status_note`: execute deterministic `pma status-note` scenarios covering
+  source precedence, canonical layout lookup, missing memory, and safe writes.
 
 ## Query/memo eval levels
 
@@ -33,12 +35,37 @@ layer results do not represent 21 distinct cases.
 | Level | Mode | What it does | Calls OpenAI? | Current result |
 |---|---|---|---:|---:|
 | Level 0 | fixture rules | Scores checked-in `fixture/stdout.md` outputs | No | 7/7 |
-| Level 1 | live rules | Executes `pma ask` / `pma memo`, then scores stdout | Yes, through commands | Previously 7/7; not rerun in Phase 0 |
-| Level 2 | fixture + judge | Scores fixtures and asks optional semantic judge | Yes, judge only | Previously 7/7; not rerun in Phase 0 |
-| Level 2 | live + judge | Executes commands and asks optional semantic judge | Yes | Previously 7/7; not rerun in Phase 0 |
+| Level 1 | live rules | Executes `pma ask` / `pma memo`, then scores stdout | Yes, through commands | Previously 7/7; not rerun in Phase 0 or Phase 1 |
+| Level 2 | fixture + judge | Scores fixtures and asks optional semantic judge | Yes, judge only | Previously 7/7; not rerun in Phase 0 or Phase 1 |
+| Level 2 | live + judge | Executes commands and asks optional semantic judge | Yes | Previously 7/7; not rerun in Phase 0 or Phase 1 |
 
 The query/memo eval unit tests currently pass 13 tests. The full repository
-test suite currently passes 212 tests.
+test suite currently passes 228 tests, plus 32 pytest subtests.
+
+## Status-note evaluation
+
+Status-note evaluation is a separate six-case deterministic suite. It does not
+call OpenAI and does not change the seven-case query/memo count.
+
+```bash
+python evals/scripts/run_status_note_eval.py \
+  --eval-root evals/public/status_note \
+  --output-root evals/outputs
+```
+
+The runner copies each synthetic `input/` project into a temporary directory,
+injects `--project-dir`, executes `pma status-note`, evaluates stdout or stderr,
+and checks any declared output-file contract. It exits nonzero if any case
+fails. Use `--case-id <id>` to run one case.
+
+The six cases cover:
+
+- a TODO template when latest memory is absent
+- progress-over-summary precedence
+- checkpoint-summary fallback when progress is missing
+- named canonical checkpoint layout resolution
+- refusal to overwrite an existing status note without `--force`
+- forced replacement with a structurally complete status note
 
 ## Fixture mode
 
@@ -178,6 +205,8 @@ The synthetic public suite covers:
 - latest-only group updates
 - last-N and since-date group windows
 - correction/supersession and current-action field boundaries
+- deterministic status-note source precedence and missing-memory behavior
+- status-note canonical layout and overwrite protection
 
 This is focused coverage for known failure modes, not a comprehensive proof of
 real-world reliability.

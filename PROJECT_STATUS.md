@@ -13,13 +13,22 @@ tool while keeping checkpoint inputs safe, scoped, and auditable.
 
 ## Current stage
 
-Phase 0 has restored one consistent v0.1.1 code baseline across checkpoint
-production and consumption. The canonical layout now provides privacy-safe
-labels for default, named, internal, external, and explicit-latest storage.
-Legacy direct `--output-dir` remains available without creating history, while
-the default and named modes retain `latest/` plus `runs/`. PMA-specific scanner
-scope is declared in the repository's `pma.toml` instead of being embedded in
-universal scanner rules.
+Phase 1 has completed an OpenAI-free release-readiness pass on top of the Phase
+0 v0.1.1 reliability baseline. PMA now has a reproducible wheel/sdist build and
+clean-wheel installation smoke, synthetic scanner dogfooding across three
+repository conventions, and a separate six-case deterministic status-note eval
+suite. The release smoke runs the installed `pma` entry point outside the source
+repository and verifies command help plus ordinary missing-checkpoint behavior.
+
+The clean-install pass found and fixed a packaging defect that source/editable
+tests could not detect: `checkpoint_reader.py` was missing from the setuptools
+module manifest, causing the installed CLI to fail at import time. A packaging
+metadata regression test now requires every runtime module under `src/` to be
+declared in the wheel manifest.
+
+The status-note eval exposed and fixed a privacy issue in missing external
+latest-memory reporting. Status-note drafts now use the canonical logical label
+`external` instead of embedding an absolute local path.
 
 The checked-in `.project_memory/latest` predates Git-context checkpoints and
 does not contain `git_context.json`. A new live checkpoint was deliberately not
@@ -27,15 +36,20 @@ created during Phase 0 because this pass did not call OpenAI. Until a later
 approved checkpoint rerun, freshness correctly reports `no_checkpoint` for
 that old snapshot.
 
-## Phase 0 validation
+## Current validation
 
-- Level 0 fixture rule eval: 7/7 pass in Phase 0.
-- Earlier live-command and optional-judge runs recorded 7/7; Phase 0 did not
+- Query/memo Level 0 fixture rule eval: 7/7 pass in Phase 1.
+- Earlier live-command and optional-judge runs recorded 7/7; Phase 1 did not
   rerun OpenAI-backed modes.
 - These are the same 7 query/memo cases across evaluation layers, not 21
   separate cases.
+- Status-note deterministic eval: 6/6 pass. This is a separate suite and is not
+  included in the query/memo case count.
 - Query/memo eval tests: 13 passed.
-- Full test suite: 212 passed.
+- Full test suite: 228 passed, with 32 pytest subtests also passing.
+- Scanner-focused regression and dogfood tests: 36 passed.
+- Wheel and sdist build: passed.
+- Clean wheel install and installed CLI smoke outside the repository: passed.
 - Compilation passed.
 - `git diff --check` passed.
 
@@ -143,6 +157,27 @@ pushed as part of this work.
   `.project_memory/latest` location is only the default layout.
 - If latest checkpoint memory is missing, the command still generates a TODO
   template with missing-information notes.
+- Missing external latest memory is described with the privacy-safe logical
+  label `external`; local absolute paths are not included in the draft.
+
+## Phase 1 scanner dogfooding
+
+Synthetic dogfood repositories now cover root-level documents, nested
+`docs`/`notes`/`research` layouts, and mixed repositories containing source,
+private data, generated output, virtual environments, egg-info, and checkpoint
+storage. The coverage confirms include/exclude precedence, zero-or-more `**`
+matching, mandatory safety ignores, supported-extension boundaries, internal
+checkpoint-root exclusion, external checkpoint isolation, deterministic order,
+and invalid-configuration failure. Real private repositories were not used.
+
+## Phase 1 release rehearsal
+
+`evals/scripts/run_release_smoke.py` builds a wheel and source distribution in
+temporary storage, installs the wheel into a clean temporary environment, and
+runs the installed console entry point from outside the repository. It covers
+top-level and subcommand help, `brief --json`, `freshness --json`, and a
+non-writing `status-note` preview without checkpoint memory. The rehearsal does
+not publish artifacts, modify release services, or call OpenAI.
 
 ## Known limitations
 
@@ -156,9 +191,11 @@ pushed as part of this work.
 
 ## Source-grounded next actions
 
-- Dogfood project-specific `pma.toml` include/exclude rules across repositories
-  with different directory conventions.
 - Keep public examples synthetic and exclude any private/raw project data from
   release scope.
-- Consider adding status-note eval coverage after the deterministic v0.1.1
-  command settles.
+- Review the Phase 1 diff and decide whether to commit it as the v0.1.1 release
+  readiness pass.
+- Decide whether author, license, and project URL metadata should be added
+  before an actual package publication; Phase 1 did not invent these values.
+- Regenerate the PMA repo checkpoint only after separately approving an OpenAI
+  call; the existing old checkpoint still lacks `git_context.json`.

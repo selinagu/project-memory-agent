@@ -1,0 +1,14 @@
+{
+  "project_name": "Fallback Lab",
+  "one_sentence_summary": "Exercise summary fallback behavior.",
+  "goal": "Use only available checkpoint evidence.",
+  "current_stage": "Testing a missing progress artifact.",
+  "confirmed_findings": ["The checkpoint summary is available."],
+  "tentative_hypotheses": [],
+  "important_decisions": [],
+  "failed_attempts": [],
+  "open_questions": [],
+  "next_actions": ["Restore progress capture in a future checkpoint."],
+  "evidence": [],
+  "last_updated": null
+}

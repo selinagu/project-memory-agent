@@ -1,0 +1,13 @@
+case_id: summary_fallback
+case_type: status_note
+capability: summary_fallback
+command: [pma, status-note, --from-latest, --latest-dir, memory/latest]
+expected_exit_code: 0
+required_includes:
+  - "Project: Fallback Lab"
+  - "Restored the canonical layout before release rehearsal."
+  - "Missing latest checkpoint files: progress_since_last.md."
+forbidden_includes:
+  - "unsupported release claim"
+  - "/tmp/"
+  - "Traceback"

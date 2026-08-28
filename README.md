@@ -10,8 +10,10 @@ resolved output layout. You can then ask questions or generate compact re-entry
 and group-update memos from the latest checkpoint.
 
 This is the v0.1.1 code baseline: useful enough to dogfood, intentionally
-small, and still explicit about its limits. The version number describes the
-repository state; it does not claim that v0.1.1 has been published.
+small, and still explicit about its limits. Phase 1 adds a reproducible package
+build and clean-install smoke check, cross-layout scanner dogfooding, and a
+separate deterministic status-note eval suite. The version number describes
+the repository state; it does not claim that v0.1.1 has been published.
 
 ## Why it exists
 
@@ -247,14 +249,25 @@ are seven cases total, not 21 separate cases:
 | Level | Description | Result |
 |---|---|---:|
 | Level 0 | Fixture rule eval over checked-in canonical outputs | 7/7 |
-| Level 1 | Live-command rule eval using `pma ask` / `pma memo` | Previously 7/7; not rerun in Phase 0 |
-| Level 2a | Fixture + optional LLM judge | Previously 7/7; not rerun in Phase 0 |
-| Level 2b | Live-command + optional LLM judge | Previously 7/7; not rerun in Phase 0 |
+| Level 1 | Live-command rule eval using `pma ask` / `pma memo` | Previously 7/7; not rerun in Phase 0 or Phase 1 |
+| Level 2a | Fixture + optional LLM judge | Previously 7/7; not rerun in Phase 0 or Phase 1 |
+| Level 2b | Live-command + optional LLM judge | Previously 7/7; not rerun in Phase 0 or Phase 1 |
+
+Status-note evaluation is a separate six-case deterministic suite. It covers a
+missing-latest TODO template, progress-over-summary precedence, summary
+fallback, named canonical layout resolution, overwrite refusal, and forced
+replacement. These six cases are not part of the seven query/memo cases.
 
 Current release checks:
 
 - Query/memo eval tests: 13 passed.
-- Full test suite: 212 passed.
+- Query/memo fixture evaluation: 7/7 passed.
+- Status-note evaluation: 6/6 passed without OpenAI.
+- Full test suite: 228 passed, including 32 subtests under pytest.
+- Scanner dogfooding covers root documents, nested document conventions, and
+  mixed repositories with private/generated/checkpoint paths.
+- Wheel and sdist build passed; the wheel installed in a clean temporary
+  environment and passed installed CLI smoke outside the repository.
 - Compilation passed.
 - `git diff --check` passed.
 
@@ -302,6 +315,12 @@ checkpoint root is inside the project, that entire generated root is excluded
 before user include rules are evaluated. The `.project_memory` ignore remains
 as a default/backward-compatible safety rule, but custom output names are also
 excluded automatically.
+
+Phase 1 dogfoods this contract against synthetic repositories with root-level
+documents, nested `docs`/`notes`/`research` conventions, and mixed source,
+private, generated, and checkpoint directories. Repeated scans must preserve a
+stable project-relative ordering. External checkpoint storage does not alter
+the selected project artifacts or expose its path through artifact labels.
 
 ### Git context
 
@@ -378,3 +397,16 @@ PYTHONPATH=src python -m pytest -q
 python -m compileall -q src tests evals/scripts
 git diff --check
 ```
+
+Run the OpenAI-free release rehearsal from an environment with the development
+extra installed:
+
+```bash
+python evals/scripts/run_release_smoke.py
+```
+
+The runner builds one wheel and one source distribution in a temporary
+directory, installs the wheel into a clean temporary virtual environment, then
+runs command help plus `brief`, `freshness`, and `status-note` missing-checkpoint
+smokes from outside the repository. It does not publish artifacts or call
+OpenAI.

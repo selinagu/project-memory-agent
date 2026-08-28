@@ -1,0 +1,12 @@
+case_id: write_refuses_without_force
+case_type: status_note
+capability: write_protection
+command: [pma, status-note, --write]
+expected_exit_code: 2
+score_stream: stderr
+required_includes:
+  - "Refusing to overwrite existing status note"
+forbidden_includes:
+  - "Traceback"
+file_equals:
+  PROJECT_STATUS.md: "Existing status must survive.\n"

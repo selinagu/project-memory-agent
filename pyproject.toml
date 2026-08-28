@@ -16,7 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 eval = ["PyYAML"]
-dev = ["pytest", "PyYAML"]
+dev = ["build", "pytest", "PyYAML"]
 
 [project.scripts]
 pma = "pma:main"
@@ -27,6 +27,7 @@ py-modules = [
   "artifacts",
   "brief",
   "checkpoint",
+  "checkpoint_reader",
   "diff_states",
   "extract_state",
   "freshness",

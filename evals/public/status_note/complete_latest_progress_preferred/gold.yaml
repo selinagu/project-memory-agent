@@ -1,0 +1,16 @@
+case_id: complete_latest_progress_preferred
+case_type: status_note
+capability: progress_precedence
+command: [pma, status-note, --from-latest, --latest-dir, memory/latest]
+expected_exit_code: 0
+required_includes:
+  - "Project: Status Lab"
+  - "Added a deterministic status-note evaluation layer."
+  - "Progress notes are the preferred recent-progress source."
+  - "Run the public status-note eval."
+  - "`PROJECT_STATUS.md`: The deterministic workflow is documented."
+forbidden_includes:
+  - "Summary fallback marker"
+  - "unsupported release claim"
+  - "/tmp/"
+  - "Traceback"

@@ -10,4 +10,5 @@ exclude = [
   "data/raw/**",
   "data/projects/**",
   "outputs/**",
+  "benchmarks/results/**",
 ]

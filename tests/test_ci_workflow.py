@@ -29,6 +29,11 @@ class CIWorkflowContractTests(unittest.TestCase):
             for step in self.workflow["jobs"]["test"]["steps"]
         )
         self.assertIn("python -m pytest -q", commands)
+        self.assertIn("benchmarks/run_benchmark.py", commands)
+        self.assertIn("--profile tiny", commands)
+        self.assertIn("--warmups 0", commands)
+        self.assertIn("--repetitions 1", commands)
+        self.assertIn("--output /tmp/", commands)
         for script in (
             "run_query_memo_eval.py",
             "run_status_note_eval.py",
@@ -48,6 +53,7 @@ class CIWorkflowContractTests(unittest.TestCase):
         )
         self.assertIn("python -m build --outdir dist", commands)
         self.assertIn("check_release_privacy.py", commands)
+        self.assertIn("src benchmarks README.md", commands)
         self.assertIn("run_release_smoke.py", commands)
         self.assertNotIn("OPENAI_API_KEY:", self.text)
 

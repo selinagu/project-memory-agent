@@ -294,7 +294,7 @@ Current release checks:
 - Python source evaluation: 7/7 passed without OpenAI.
 - Git-aware state evaluation: 7/7 passed without OpenAI.
 - Reliability evaluation: 5/5 passed without OpenAI.
-- Full test suite: 304 passed, including 36 pytest subtests.
+- Full test suite: 317 passed, including 39 pytest subtests.
 - CI runs the full test suite and all five deterministic eval suites on Python
   3.10, 3.11, 3.12, and 3.13.
 - Scanner dogfooding covers root documents, nested document conventions, and
@@ -477,6 +477,31 @@ capture full diffs, or summarize changes since a prior commit. All four ordinary
 freshness states exit with status code 0; use the human output or JSON `status`
 field when scripting.
 
+## Scalability benchmark
+
+PMA includes a reproducible synthetic benchmark for its deterministic pipeline.
+It measures scan, manifest, parsing, combined-note construction, a full
+checkpoint using a deterministic fake extractor, transactional publication,
+bounded source lookup, and peak Python-tracked allocations. It does not call
+OpenAI, and its offline checkpoint and local lookup timings are not presented
+as real LLM or end-to-end `pma ask` latency.
+
+The P1 WSL baseline used one warmup and five repetitions:
+
+| Profile | Files | Approx. LOC | Offline checkpoint p50 | Lookup p50 | Peak Python allocation |
+|---|---:|---:|---:|---:|---:|
+| tiny | 25 | 349 | 10.317 ms | 0.253 ms | 1.20 MB |
+| small | 100 | 2,453 | 28.939 ms | 1.518 ms | 1.76 MB |
+| medium | 500 | 15,600 | 122.669 ms | 12.268 ms | 6.57 MB |
+| large | 1,000 | 31,350 | 186.382 ms | 20.773 ms | 13.21 MB |
+| stress | 2,500 | 33,188 | 394.779 ms | 23.118 ms | 26.05 MB |
+
+Scan was the largest separately measured stage, followed by parsing. Growth was
+broadly proportional to selected file count, so P1 records the baseline without
+introducing a speculative optimization. See
+[benchmarks/README.md](benchmarks/README.md) for the full methodology, p95
+results, budget interpretation, reproducibility command, and limitations.
+
 ## Limitations
 
 - This is a local CLI prototype, not a web app or autonomous agent.
@@ -506,8 +531,9 @@ field when scripting.
 pip install -e '.[dev]'
 PYTHONPATH=src python -m unittest discover -s tests -q
 PYTHONPATH=src python -m pytest -q
-python -m compileall -q src tests evals/scripts
+python -m compileall -q src tests evals/scripts benchmarks
 python evals/scripts/check_release_privacy.py
+python benchmarks/run_benchmark.py --profile tiny --warmups 0 --repetitions 1 --output /tmp/pma-benchmark-smoke
 git diff --check
 ```
 

@@ -12,6 +12,7 @@ from typing import Iterable
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_TARGETS = (
     REPO_ROOT / "src",
+    REPO_ROOT / "benchmarks",
     REPO_ROOT / "README.md",
     REPO_ROOT / "pyproject.toml",
 )

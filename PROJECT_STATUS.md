@@ -13,7 +13,23 @@ tool while keeping checkpoint inputs safe, scoped, and auditable.
 
 ## Current stage
 
-The P0 reliability baseline is complete on top of the Phase 3 Git-aware and
+The P1 scalability benchmark is complete on top of the P0 reliability
+baseline. A deterministic synthetic generator now covers 25, 100, 500, 1,000,
+and 2,500 total-file profiles with fixed-seed content, nested mixed artifact
+types, scanner safety cases, exact byte/LOC counts, and ignored raw reports.
+The offline runner measures seven stages with `time.perf_counter_ns()`,
+median/p95/min/max summaries, effective scanner budgets plus fingerprint, and
+peak Python-tracked allocations. It uses a deterministic fake extractor and
+does not call OpenAI.
+
+On CPython 3.12.3 under WSL, offline checkpoint p50 increased from 10.317 ms at
+25 files to 394.779 ms at 2,500 files. Scan was the largest separately measured
+stage; stress scan was 147.340 ms, parsing 65.739 ms, manifest hashing 29.580 ms,
+and publication 29.839 ms. Peak Python allocation increased from approximately
+1.20 MB to 26.05 MB. The observed curve is broadly proportional to selected
+file count, so P1 did not add a speculative optimization.
+
+The P0 reliability baseline remains complete on top of the Phase 3 Git-aware and
 Phase 2 Python-aware product baseline. It adds:
 
 - validated construction under `.building/`, immutable successful history,
@@ -79,7 +95,7 @@ that old snapshot.
 - Python source deterministic eval: 7/7 pass. This is also a separate suite.
 - Git-aware state deterministic eval: 7/7 pass. This is a fourth separate suite.
 - Reliability deterministic eval: 5/5 pass. This is a fifth separate suite.
-- Full test suite: 304 passed, with 36 pytest subtests also passing.
+- Full test suite: 317 passed, with 39 pytest subtests also passing.
 - Query/memo eval tests: 13 passed.
 - Scanner-focused regression and dogfood tests: 36 passed.
 - Wheel and sdist build: passed.
@@ -87,9 +103,10 @@ that old snapshot.
 - Compilation passed.
 - `git diff --check` passed.
 
-PMA's default repo-self-scan still selects exactly four public project sources:
+PMA's default repo-self-scan now selects exactly five public project sources:
 `PROJECT_STATUS.md`, `README.md`,
-`data/examples/synthetic_cache_router_state.json`, and `evals/README.md`.
+`benchmarks/README.md`, `data/examples/synthetic_cache_router_state.json`, and
+`evals/README.md`.
 Python scanning has not been enabled in PMA's own root `pma.toml`.
 
 ## Scanner safety milestone

@@ -6,6 +6,7 @@ from typing import Any
 
 
 SOURCE_MARKER_RE = re.compile(r"<!--\s*SOURCE:\s*(.*?)\s*-->")
+CHECKPOINT_METADATA_PREFIX = "CHECKPOINT_METADATA:"
 TOKEN_RE = re.compile(r"[A-Za-z0-9_]+")
 # i think this is hard-coding again, not generalizable
 SOURCE_LOOKUP_TERMS = {
@@ -76,6 +77,10 @@ def _tokens(text: str) -> set[str]:
     return {token.lower() for token in TOKEN_RE.findall(text)}
 
 
+def is_checkpoint_metadata_source(source: str) -> bool:
+    return source.strip().startswith(CHECKPOINT_METADATA_PREFIX)
+
+
 def _string_values(value: Any) -> list[str]:
     if isinstance(value, str):
         return [value]
@@ -141,6 +146,7 @@ def project_state_lookup_text(
     evidence_sources = {
         source
         for source, _ in lookup_data.evidence
+        if not is_checkpoint_metadata_source(source)
     }
 
     return lookup_data.all_text, evidence_sources
@@ -236,7 +242,13 @@ def select_source_sections(
     for section in sections:
         sections_by_source.setdefault(section.source, []).append(section)
 
-    named_sources = list(dict.fromkeys(source for source, _ in state_evidence))
+    named_sources = list(
+        dict.fromkeys(
+            source
+            for source, _ in state_evidence
+            if not is_checkpoint_metadata_source(source)
+        )
+    )
     diagnostics = [
         (
             f"`project_state.json` names `{source}` as evidence, but no "

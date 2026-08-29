@@ -1,0 +1,14 @@
+{
+  "context": {
+    "schema_version": 2,
+    "available": true,
+    "branch": "work",
+    "head_commit_short": "bbbbbbb",
+    "working_tree_clean": false,
+    "detached_head": false,
+    "staged_files": ["README.md"],
+    "unstaged_files": ["src/core.py"],
+    "untracked_files": ["notes/todo.md"],
+    "conflicted_files": []
+  }
+}

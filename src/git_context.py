@@ -15,6 +15,10 @@ from project_layout import generated_output_prefixes as resolve_generated_output
 GIT_CONTEXT_SCHEMA_VERSION = 2
 GIT_TIMEOUT_SECONDS = 10
 CONFLICT_CODES = {"DD", "AU", "UD", "UA", "DU", "AA", "UU"}
+GIT_CONTEXT_EVIDENCE_SOURCE = "CHECKPOINT_METADATA: git_context.json"
+GIT_PROMPT_MAX_PATHS = 50
+GIT_PROMPT_MAX_CHARS = 4_000
+GIT_PROMPT_MAX_SCALAR_CHARS = 160
 
 
 @dataclass(frozen=True)
@@ -395,6 +399,162 @@ def render_git_context_markdown(context: GitContext) -> str:
         lines.extend(["", f"### {title}", ""])
         lines.extend([f"- `{path}`" for path in paths] or ["- None"])
     return "\n".join([*lines, ""])
+
+
+def _bounded_prompt_scalar(value: object, *, fallback: str = "none") -> str:
+    if not isinstance(value, str):
+        return fallback
+    sanitized = " ".join(value.split())
+    if not sanitized:
+        return fallback
+    return sanitized[:GIT_PROMPT_MAX_SCALAR_CHARS]
+
+
+def _prompt_path(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.replace("\\", "/").strip()
+    pure_path = PurePosixPath(normalized)
+    if (
+        not normalized
+        or pure_path.is_absolute()
+        or ".." in pure_path.parts
+        or any(part in {"", "."} for part in pure_path.parts)
+        or any(ord(character) < 32 for character in normalized)
+    ):
+        return None
+    return pure_path.as_posix()
+
+
+def _prompt_path_list(value: object) -> list[str] | None:
+    if not isinstance(value, list):
+        return None
+    paths: list[str] = []
+    for item in value:
+        path = _prompt_path(item)
+        if path is None:
+            return None
+        paths.append(path)
+    return sorted(set(paths))
+
+
+def _unavailable_prompt(reason: str) -> str:
+    safe_reasons = {
+        "git_context_not_provided",
+        "git_not_installed",
+        "git_command_failed",
+        "invalid_git_context",
+        "not_a_git_repository",
+        "unsupported_git_context_schema",
+    }
+    if reason not in safe_reasons:
+        reason = "invalid_git_context"
+    return "\n".join(
+        (
+            "repository_available: no",
+            f"reason: {reason}",
+            "snapshot_scope: checkpoint_time_only",
+        )
+    )
+
+
+def render_git_context_for_prompt(
+    context: GitContext | dict[str, object] | None,
+) -> str:
+    """Render bounded, privacy-safe checkpoint Git metadata for extraction."""
+    if context is None:
+        return _unavailable_prompt("git_context_not_provided")
+    data = context.to_dict() if isinstance(context, GitContext) else context
+    if not isinstance(data, dict):
+        return _unavailable_prompt("invalid_git_context")
+
+    schema_version = data.get("schema_version")
+    if schema_version not in {1, GIT_CONTEXT_SCHEMA_VERSION}:
+        return _unavailable_prompt("unsupported_git_context_schema")
+    if data.get("available") is not True:
+        reason = data.get("reason")
+        return _unavailable_prompt(
+            reason if isinstance(reason, str) else "invalid_git_context"
+        )
+
+    categories: list[tuple[str, list[str]]] = []
+    for name, field_name in (
+        ("staged", "staged_files"),
+        ("unstaged", "unstaged_files"),
+        ("untracked", "untracked_files"),
+        ("conflicted", "conflicted_files"),
+    ):
+        paths = _prompt_path_list(data.get(field_name, []))
+        if paths is None:
+            return _unavailable_prompt("invalid_git_context")
+        categories.append((name, paths))
+
+    statuses_by_path: dict[str, list[str]] = {}
+    for category, paths in categories:
+        for path in paths:
+            statuses_by_path.setdefault(path, []).append(category)
+
+    working_tree_clean = data.get("working_tree_clean")
+    if not isinstance(working_tree_clean, bool):
+        return _unavailable_prompt("invalid_git_context")
+    if working_tree_clean == bool(statuses_by_path):
+        return _unavailable_prompt("invalid_git_context")
+    detached_head = data.get("detached_head")
+    if detached_head not in {True, False, None}:
+        return _unavailable_prompt("invalid_git_context")
+
+    branch = _bounded_prompt_scalar(data.get("branch"))
+    if branch.startswith("/") or _looks_like_windows_absolute_path(branch):
+        return _unavailable_prompt("invalid_git_context")
+    if detached_head:
+        branch = "none (detached HEAD)"
+    head = _bounded_prompt_scalar(data.get("head_commit_short"))
+    if head == "none":
+        full_head = data.get("head_commit")
+        if isinstance(full_head, str) and full_head:
+            head = _bounded_prompt_scalar(full_head[:12])
+
+    lines = [
+        "repository_available: yes",
+        f"schema_version: {schema_version}",
+        "snapshot_scope: checkpoint_time_only",
+        f"branch: {branch}",
+        f"detached_head: {'yes' if detached_head else 'no'}",
+        f"head: {head}",
+        f"working_tree: {'clean' if working_tree_clean else 'dirty'}",
+    ]
+    for category, paths in categories:
+        lines.append(f"{category}_count: {len(paths)}")
+
+    ordered_paths = sorted(statuses_by_path)
+    lines.append(f"changed_path_count: {len(ordered_paths)}")
+    if ordered_paths:
+        lines.append("changed_paths:")
+
+    included = 0
+    for path in ordered_paths[:GIT_PROMPT_MAX_PATHS]:
+        statuses = ",".join(sorted(statuses_by_path[path]))
+        candidate = f"- [{statuses}] {path}"
+        reserved = len("\n- omitted_changed_paths: 999999")
+        if len("\n".join([*lines, candidate])) + reserved > GIT_PROMPT_MAX_CHARS:
+            break
+        lines.append(candidate)
+        included += 1
+
+    omitted = len(ordered_paths) - included
+    if omitted:
+        lines.append(f"- omitted_changed_paths: {omitted}")
+    rendered = "\n".join(lines)
+    return rendered[:GIT_PROMPT_MAX_CHARS]
+
+
+def _looks_like_windows_absolute_path(value: str) -> bool:
+    return (
+        len(value) >= 3
+        and value[0].isalpha()
+        and value[1] == ":"
+        and value[2] in {"/", "\\"}
+    )
 
 
 def write_git_context(context: GitContext, output_dir: Path) -> None:

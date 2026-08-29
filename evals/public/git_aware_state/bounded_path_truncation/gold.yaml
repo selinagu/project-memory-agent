@@ -1,0 +1,10 @@
+case_id: bounded_path_truncation
+case_type: git_aware_state
+capability: deterministic path truncation
+required_includes:
+  - "changed_path_count: 55"
+  - "src/file_000.py"
+  - "omitted_changed_paths: 5"
+forbidden_includes:
+  - "src/file_054.py"
+max_chars: 4000

@@ -1,0 +1,10 @@
+case_id: non_git_repository
+case_type: git_aware_state
+capability: non-Git fallback
+required_includes:
+  - "repository_available: no"
+  - "reason: not_a_git_repository"
+  - "snapshot_scope: checkpoint_time_only"
+forbidden_includes:
+  - "/tmp/private-project"
+max_chars: 4000

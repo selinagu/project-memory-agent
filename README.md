@@ -13,9 +13,10 @@ This is the v0.1.1 code baseline: useful enough to dogfood, intentionally
 small, and still explicit about its limits. Phase 1 adds a reproducible package
 build and clean-install smoke check, cross-layout scanner dogfooding, and a
 separate deterministic status-note eval suite. Phase 2 adds opt-in, bounded
-Python source structure extraction without executing project code. The version
-number describes the repository state; it does not claim that v0.1.1 has been
-published.
+Python source structure extraction without executing project code. Phase 3
+adds a bounded checkpoint-time Git metadata block to ProjectState extraction
+with an explicit non-inference and evidence-source boundary. The version number
+describes the repository state; it does not claim that v0.1.1 has been published.
 
 ## Why it exists
 
@@ -251,9 +252,9 @@ are seven cases total, not 21 separate cases:
 | Level | Description | Result |
 |---|---|---:|
 | Level 0 | Fixture rule eval over checked-in canonical outputs | 7/7 |
-| Level 1 | Live-command rule eval using `pma ask` / `pma memo` | Previously 7/7; not rerun in Phase 0, 1, or 2 |
-| Level 2a | Fixture + optional LLM judge | Previously 7/7; not rerun in Phase 0, 1, or 2 |
-| Level 2b | Live-command + optional LLM judge | Previously 7/7; not rerun in Phase 0, 1, or 2 |
+| Level 1 | Live-command rule eval using `pma ask` / `pma memo` | Previously 7/7; not rerun in Phase 0, 1, 2, or 3 |
+| Level 2a | Fixture + optional LLM judge | Previously 7/7; not rerun in Phase 0, 1, 2, or 3 |
+| Level 2b | Live-command + optional LLM judge | Previously 7/7; not rerun in Phase 0, 1, 2, or 3 |
 
 Status-note evaluation is a separate six-case deterministic suite. It covers a
 missing-latest TODO template, progress-over-summary precedence, summary
@@ -265,13 +266,19 @@ It covers structure extraction, class methods and bases, literal redaction,
 bounded syntax failures, default-off behavior, include/exclude scoping, and
 proof that scanned top-level side effects are not executed.
 
+Git-aware state evaluation is a fourth, separate seven-case deterministic
+suite. It covers clean and dirty snapshots, changed-path non-inference,
+project-relative subdirectory scope, non-Git fallback, deterministic
+truncation, and separation of checkpoint metadata from SOURCE lookup.
+
 Current release checks:
 
 - Query/memo eval tests: 13 passed.
 - Query/memo fixture evaluation: 7/7 passed.
 - Status-note evaluation: 6/6 passed without OpenAI.
 - Python source evaluation: 7/7 passed without OpenAI.
-- Full test suite: 253 passed, including 32 subtests under pytest.
+- Git-aware state evaluation: 7/7 passed without OpenAI.
+- Full test suite: 271 passed, including 32 subtests under pytest.
 - Scanner dogfooding covers root documents, nested document conventions, and
   mixed repositories with private/generated/checkpoint paths.
 - Wheel and sdist build passed; the wheel installed in a clean temporary
@@ -377,12 +384,25 @@ stored with both the timestamped run and `latest`. Non-Git projects continue to
 checkpoint normally and record an explicit unavailable state.
 
 Git context captures only the current branch, HEAD identity, and working-tree
-status categories. It does not store full diffs or summarize changes since a
-previous checkpoint, and it does not yet influence `ProjectState` extraction.
+status categories. Phase 3 renders a separate checkpoint-time metadata block
+for `ProjectState` extraction. The prompt form is capped at 4,000 characters
+and 50 changed paths; it omits repository roots, commit subjects, fingerprints,
+file contents, raw Git errors, remotes, logs, and full diffs. It includes only
+bounded branch/HEAD state, category counts, and project-relative changed paths.
+
+A changed path proves only its Git status at checkpoint time. It does not prove
+implementation, progress, completion, test results, decisions, removals, or
+planned actions. Repository facts may use the logical evidence source
+`CHECKPOINT_METADATA: git_context.json`; project meaning and actions still
+require normal SOURCE evidence. Metadata evidence is excluded from
+`combined_notes.md` SOURCE lookup. Ask and memo treat any such fact as a
+checkpoint snapshot, not live state; `pma freshness` remains the deterministic
+current comparison.
+
 For a project inside a larger repository, changed paths outside the project are
 excluded and included paths are rewritten project-relative. Absolute repository
-paths are never stored. Submodules may appear as changed paths, but are not
-inspected recursively.
+paths are never included in the prompt form. Submodules may appear as changed
+paths, but are not inspected recursively.
 
 Changed Git project files are fingerprinted in `git_context.json` using their
 current byte size and SHA-256 digest. Missing files and directories are recorded
@@ -437,6 +457,9 @@ field when scripting.
   checkpoint context by default, and cannot override rule failures.
 - Windowed group-update conflict handling is prompt-guided rather than a
   deterministic conflict detector.
+- Git-aware state interpretation is prompt-guided. The deterministic layer
+  bounds and labels repository metadata but does not infer semantic progress
+  from a diff, file contents, or commit history.
 
 ## Development checks
 
@@ -466,5 +489,13 @@ Run the separate deterministic Python source evaluation with:
 ```bash
 python evals/scripts/run_python_source_eval.py \
   --eval-root evals/public/python_source \
+  --output-root evals/outputs
+```
+
+Run the separate deterministic Git-aware state evaluation with:
+
+```bash
+python evals/scripts/run_git_aware_state_eval.py \
+  --eval-root evals/public/git_aware_state \
   --output-root evals/outputs
 ```

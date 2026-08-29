@@ -1,0 +1,19 @@
+{
+  "context": {
+    "schema_version": 2,
+    "available": true,
+    "repository_root": "/home/synthetic/private-repository",
+    "branch": "main",
+    "head_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "head_commit_short": "aaaaaaa",
+    "head_commit_subject": "Private commit subject",
+    "working_tree_clean": true,
+    "detached_head": false,
+    "staged_files": [],
+    "unstaged_files": [],
+    "untracked_files": [],
+    "conflicted_files": [],
+    "changed_files": [],
+    "file_fingerprints": [{"path": "README.md", "sha256": "secret"}]
+  }
+}

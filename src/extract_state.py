@@ -7,6 +7,11 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from pydantic import ValidationError
 
+from git_context import (
+    GIT_CONTEXT_EVIDENCE_SOURCE,
+    GitContext,
+    render_git_context_for_prompt,
+)
 from prompts import EXTRACT_PROJECT_STATE_PROMPT
 from schemas import ProjectState
 
@@ -43,7 +48,12 @@ def extract_source_markers(notes: str) -> list[str]:
     return [marker.strip() for marker in markers if marker.strip()]
 
 
-def normalize_evidence_sources(data: dict, input_path: Path, allowed_sources: list[str]) -> None:
+def normalize_evidence_sources(
+    data: dict,
+    input_path: Path,
+    allowed_sources: list[str],
+    allowed_metadata_sources: set[str] | None = None,
+) -> None:
     """
     Keep evidence sources program-controlled without blindly overwriting useful sources.
 
@@ -60,12 +70,24 @@ def normalize_evidence_sources(data: dict, input_path: Path, allowed_sources: li
         return
 
     fallback_source = str(input_path)
+    allowed_metadata_sources = allowed_metadata_sources or set()
 
     for ev in data["evidence"]:
         if not isinstance(ev, dict):
             continue
 
         source = ev.get("source")
+
+        if source in allowed_metadata_sources:
+            continue
+        if source == GIT_CONTEXT_EVIDENCE_SOURCE:
+            if len(allowed_sources) == 1:
+                ev["source"] = allowed_sources[0]
+            elif allowed_sources:
+                ev["source"] = "UNKNOWN_SOURCE_REVIEW_NEEDED"
+            else:
+                ev["source"] = fallback_source
+            continue
 
         if allowed_sources:
             if source in allowed_sources:
@@ -80,14 +102,35 @@ def normalize_evidence_sources(data: dict, input_path: Path, allowed_sources: li
                 ev["source"] = fallback_source
 
 
-def extract_state(input_path: Path, output_path: Path, model: str) -> ProjectState:
+def extract_state(
+    input_path: Path,
+    output_path: Path,
+    model: str,
+    git_context: GitContext | dict[str, object] | None = None,
+) -> ProjectState:
     notes = input_path.read_text(encoding="utf-8")
 
     allowed_sources = extract_source_markers(notes)
+    git_context_block = render_git_context_for_prompt(git_context)
+    allowed_metadata_sources = (
+        {GIT_CONTEXT_EVIDENCE_SOURCE} if git_context is not None else set()
+    )
+    metadata_evidence_rule = (
+        "For repository metadata facts only, the evidence source may be exactly "
+        f"{GIT_CONTEXT_EVIDENCE_SOURCE}. Project conclusions, findings, decisions, "
+        "and next actions still require SOURCE evidence."
+        if allowed_metadata_sources
+        else (
+            "No checkpoint Git context was provided. Do not use checkpoint metadata "
+            "as an evidence source."
+        )
+    )
 
     prompt = EXTRACT_PROJECT_STATE_PROMPT.format(
         source=str(input_path),
         notes=notes,
+        git_context=git_context_block,
+        metadata_evidence_rule=metadata_evidence_rule,
     )
 
     client = OpenAI()
@@ -113,6 +156,7 @@ def extract_state(input_path: Path, output_path: Path, model: str) -> ProjectSta
         data=data,
         input_path=input_path,
         allowed_sources=allowed_sources,
+        allowed_metadata_sources=allowed_metadata_sources,
     )
 
     try:

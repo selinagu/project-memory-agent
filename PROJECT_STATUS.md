@@ -13,13 +13,21 @@ tool while keeping checkpoint inputs safe, scoped, and auditable.
 
 ## Current stage
 
-Phase 2 has completed an OpenAI-free bounded Python source-awareness pass on top
-of the Phase 1 release-readiness baseline. Python scanning is explicit opt-in
-through `[scanner].include_python = true`; the default scanner contract and PMA
-repo-self-scan remain unchanged. Enabled Python files are summarized through a
-deterministic standard-library AST extractor rather than raw source inclusion.
+Phase 3 has completed bounded Git-aware state reconstruction on top of the
+Phase 2 Python source-awareness baseline. Each checkpoint now provides
+ProjectState extraction with a separately delimited, checkpoint-time Git
+metadata block. The block is capped at 4,000 characters and 50 changed paths
+and excludes repository roots, commit subjects, fingerprints, file contents,
+raw Git errors, remotes, logs, and full diffs.
 
-The extractor records bounded structural information such as imports, public
+Git metadata remains distinct from SOURCE artifacts and is not written into
+`combined_notes.md`. It can support repository facts through the logical
+evidence label `CHECKPOINT_METADATA: git_context.json`, but changed paths,
+branch names, dirty state, and HEAD identifiers cannot prove semantic progress,
+implementation, completion, tests, decisions, removals, or next actions.
+Metadata-only evidence is excluded from bounded SOURCE lookup.
+
+The Phase 2 Python extractor records bounded structural information such as imports, public
 classes/functions/methods, signatures, bases, safe annotations, a short module
 docstring summary, and static `__all__` names. It does not import or execute
 project code and does not expose function bodies, ordinary constants, decorator
@@ -39,22 +47,24 @@ latest-memory reporting. Status-note drafts now use the canonical logical label
 
 The checked-in `.project_memory/latest` predates Git-context checkpoints and
 does not contain `git_context.json`. A new live checkpoint was deliberately not
-created during Phase 0 because this pass did not call OpenAI. Until a later
+created during Phases 0 through 3 because those passes did not call OpenAI.
+Until a later
 approved checkpoint rerun, freshness correctly reports `no_checkpoint` for
 that old snapshot.
 
 ## Current validation
 
-- Query/memo Level 0 fixture rule eval: 7/7 pass in Phase 2.
-- Earlier live-command and optional-judge runs recorded 7/7; Phase 2 did not
+- Query/memo Level 0 fixture rule eval: 7/7 pass in Phase 3.
+- Earlier live-command and optional-judge runs recorded 7/7; Phase 3 did not
   rerun OpenAI-backed modes.
 - These are the same 7 query/memo cases across evaluation layers, not 21
   separate cases.
 - Status-note deterministic eval: 6/6 pass. This is a separate suite and is not
   included in the query/memo case count.
 - Python source deterministic eval: 7/7 pass. This is also a separate suite.
+- Git-aware state deterministic eval: 7/7 pass. This is a fourth separate suite.
 - Query/memo eval tests: 13 passed.
-- Full test suite: 253 passed, with 32 pytest subtests also passing.
+- Full test suite: 271 passed, with 32 pytest subtests also passing.
 - Scanner-focused regression and dogfood tests: 36 passed.
 - Wheel and sdist build: passed.
 - Clean wheel install and installed CLI smoke outside the repository: passed.
@@ -208,6 +218,24 @@ side effects. Additional unit coverage checks encoding cookies, parameter kinds,
 deterministic symbol truncation, oversized sources, external file symlinks, and
 mocked checkpoint SOURCE provenance.
 
+## Phase 3 bounded Git-aware state reconstruction
+
+The Phase 3 renderer accepts Git-context schema versions 1 and 2 and fails
+closed for malformed or future records. Non-Git repositories, detached HEAD,
+unborn repositories, missing HEAD, internal/external checkpoint layouts, and
+projects nested inside larger repositories retain bounded fallback behavior.
+Git metadata is persisted before OpenAI extraction begins, so deterministic
+`git_context.json` and `git_context.md` survive an extraction failure.
+
+Query and all memo modes treat metadata-derived ProjectState facts as
+checkpoint-time snapshots rather than live worktree state. They do not execute
+new Git commands or scan the repository; `pma freshness` remains responsible
+for current deterministic comparison. The separate seven-case public eval
+covers clean and dirty contexts, filename non-inference, subproject scope,
+non-Git fallback, deterministic truncation, and metadata/SOURCE separation.
+Phase 3 did not run OpenAI-backed live or judge evals and did not regenerate the
+repository checkpoint.
+
 ## Known limitations
 
 - Query/memo judge mode is optional and not default.
@@ -219,16 +247,19 @@ mocked checkpoint SOURCE provenance.
 - Python source awareness is opt-in and intentionally structural; it does not
   inspect function bodies, infer types, build call graphs, or follow imports.
 - Non-Python programming languages remain unsupported.
+- Git-aware semantic interpretation remains prompt-guided. Phase 3 does not
+  ingest full diffs, file contents, commit history, remotes, or live repository
+  state into ask or memo.
 
 ## Source-grounded next actions
 
 - Keep public examples synthetic and exclude any private/raw project data from
   release scope.
 - Phase 1 release readiness was committed as `6b6d2f1`.
-- Review the Phase 2 bounded-source contract before enabling it in real project
-  configurations.
-- Consider versioning the opt-in Python capability as v0.2.0; Phase 2 did not
-  change the current v0.1.1 package version.
+- Review the Phase 2 bounded-source and Phase 3 Git-metadata contracts before
+  enabling them in real project configurations.
+- Consider versioning the Phase 2 Python and Phase 3 Git-aware capabilities as
+  v0.2.0; neither phase changed the current v0.1.1 package version.
 - Decide whether author, license, and project URL metadata should be added
   before an actual package publication; Phase 1 did not invent these values.
 - Regenerate the PMA repo checkpoint only after separately approving an OpenAI

@@ -1,0 +1,10 @@
+case_id: project_subdirectory_scope
+case_type: git_aware_state
+capability: project-relative path boundary
+required_includes:
+  - "subproject.md"
+forbidden_includes:
+  - "../outside.md"
+  - "/repository/subproject"
+  - "outside.md"
+max_chars: 4000

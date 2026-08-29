@@ -1,0 +1,15 @@
+{
+  "operation": "prompt_contract",
+  "context": {
+    "schema_version": 2,
+    "available": true,
+    "branch": "feature/done",
+    "head_commit_short": "ccccccc",
+    "working_tree_clean": false,
+    "detached_head": false,
+    "staged_files": [],
+    "unstaged_files": ["src/feature_complete.py"],
+    "untracked_files": [],
+    "conflicted_files": []
+  }
+}

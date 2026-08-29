@@ -1,0 +1,11 @@
+case_id: metadata_source_boundary
+case_type: git_aware_state
+capability: metadata and SOURCE evidence separation
+required_includes:
+  - "\"selected_sources\": ["
+  - "\"README.md\""
+  - "\"diagnostics\": []"
+  - "\"source_lookup_evidence\": ["
+forbidden_includes:
+  - "CHECKPOINT_METADATA: git_context.json"
+  - "no matching SOURCE section"

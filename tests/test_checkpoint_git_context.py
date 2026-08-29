@@ -9,7 +9,12 @@ from schemas import ProjectState
 from tests.test_git_context import GIT_AVAILABLE, init_repository
 
 
-def fake_extract_state(input_path: Path, output_path: Path, model: str) -> ProjectState:
+def fake_extract_state(
+    input_path: Path,
+    output_path: Path,
+    model: str,
+    git_context=None,
+) -> ProjectState:
     state = ProjectState(
         project_name="test",
         one_sentence_summary="test",
@@ -21,7 +26,7 @@ def fake_extract_state(input_path: Path, output_path: Path, model: str) -> Proje
 
 
 class CheckpointGitContextTests(unittest.TestCase):
-    def test_non_git_checkpoint_writes_context_without_changing_llm_input(self):
+    def test_non_git_checkpoint_writes_context_without_changing_combined_notes(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             (root / "README.md").write_text("source text", encoding="utf-8")
@@ -42,6 +47,41 @@ class CheckpointGitContextTests(unittest.TestCase):
         self.assertIn("Git context is unavailable", markdown)
         self.assertNotIn("Git Context", combined)
         self.assertNotIn("git_context", state)
+
+    def test_checkpoint_passes_git_context_separately_to_extraction(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "README.md").write_text("source text", encoding="utf-8")
+            output = root / "output"
+
+            with patch(
+                "checkpoint.extract_state", side_effect=fake_extract_state
+            ) as mocked:
+                checkpoint.write_checkpoint_outputs(root, output, "unused")
+
+            kwargs = mocked.call_args.kwargs
+            self.assertIn("git_context", kwargs)
+            self.assertFalse(kwargs["git_context"].available)
+            combined = (output / "combined_notes.md").read_text(encoding="utf-8")
+
+        self.assertNotIn("CHECKPOINT_GIT_CONTEXT", combined)
+
+    def test_git_metadata_is_persisted_before_openai_extraction_failure(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "README.md").write_text("source text", encoding="utf-8")
+            output = root / "output"
+
+            with patch(
+                "checkpoint.extract_state",
+                side_effect=RuntimeError("simulated extraction failure"),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "simulated extraction"):
+                    checkpoint.write_checkpoint_outputs(root, output, "unused")
+
+            self.assertTrue((output / "git_context.json").is_file())
+            self.assertTrue((output / "git_context.md").is_file())
+            self.assertFalse((output / "project_state.json").exists())
 
     @unittest.skipUnless(GIT_AVAILABLE, "Git executable is unavailable")
     def test_clean_git_history_checkpoint_copies_context_to_latest(self):

@@ -1,0 +1,10 @@
+case_id: changed_filename_is_not_completion_evidence
+case_type: git_aware_state
+capability: prompt non-inference contract
+required_includes:
+  - "A changed filename does not prove that a feature was implemented"
+  - "A dirty working tree is not evidence of progress"
+  - "Never turn changed paths into next_actions"
+  - "CHECKPOINT_METADATA: git_context.json"
+  - "src/feature_complete.py"
+max_chars: 12000

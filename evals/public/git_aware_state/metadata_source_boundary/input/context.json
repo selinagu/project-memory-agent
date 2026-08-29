@@ -1,0 +1,23 @@
+{
+  "operation": "metadata_boundary",
+  "question": "What evidence supports the recorded project goal?",
+  "project_state": {
+    "goal": "Ship bounded Git-aware state reconstruction.",
+    "evidence": [
+      {
+        "source": "CHECKPOINT_METADATA: git_context.json",
+        "quote_or_summary": "The worktree was dirty at checkpoint time."
+      },
+      {
+        "source": "README.md",
+        "quote_or_summary": "Ship bounded Git-aware state reconstruction."
+      }
+    ]
+  },
+  "sections": [
+    {
+      "source": "README.md",
+      "text": "The recorded project goal is bounded Git-aware state reconstruction."
+    }
+  ]
+}

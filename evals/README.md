@@ -27,6 +27,8 @@ project cases belong under ignored paths such as `evals/private/` and
   source precedence, canonical layout lookup, missing memory, and safe writes.
 - `python_source`: scan and parse explicitly enabled Python files into bounded
   structural previews without executing project code.
+- `git_aware_state`: render and validate bounded checkpoint-time Git metadata,
+  non-inference rules, and metadata/SOURCE evidence separation.
 
 ## Query/memo eval levels
 
@@ -37,12 +39,12 @@ layer results do not represent 21 distinct cases.
 | Level | Mode | What it does | Calls OpenAI? | Current result |
 |---|---|---|---:|---:|
 | Level 0 | fixture rules | Scores checked-in `fixture/stdout.md` outputs | No | 7/7 |
-| Level 1 | live rules | Executes `pma ask` / `pma memo`, then scores stdout | Yes, through commands | Previously 7/7; not rerun in Phase 0, 1, or 2 |
-| Level 2 | fixture + judge | Scores fixtures and asks optional semantic judge | Yes, judge only | Previously 7/7; not rerun in Phase 0, 1, or 2 |
-| Level 2 | live + judge | Executes commands and asks optional semantic judge | Yes | Previously 7/7; not rerun in Phase 0, 1, or 2 |
+| Level 1 | live rules | Executes `pma ask` / `pma memo`, then scores stdout | Yes, through commands | Previously 7/7; not rerun in Phase 0, 1, 2, or 3 |
+| Level 2 | fixture + judge | Scores fixtures and asks optional semantic judge | Yes, judge only | Previously 7/7; not rerun in Phase 0, 1, 2, or 3 |
+| Level 2 | live + judge | Executes commands and asks optional semantic judge | Yes | Previously 7/7; not rerun in Phase 0, 1, 2, or 3 |
 
 The query/memo eval unit tests currently pass 13 tests. The full repository
-test suite currently passes 253 tests, plus 32 pytest subtests.
+test suite currently passes 271 tests, plus 32 pytest subtests.
 
 ## Status-note evaluation
 
@@ -96,6 +98,33 @@ The seven cases cover:
 - default-off Python scanning
 - opt-in include/exclude scoping
 - proof that top-level source side effects are not executed
+
+## Git-aware state evaluation
+
+Git-aware state evaluation is a separate seven-case deterministic suite. It
+does not call OpenAI and is not part of the query/memo, status-note, or Python
+source case counts.
+
+```bash
+python evals/scripts/run_git_aware_state_eval.py \
+  --eval-root evals/public/git_aware_state \
+  --output-root evals/outputs
+```
+
+The runner renders synthetic Git-context records, checks the extraction prompt
+contract, and verifies that checkpoint metadata evidence is excluded from
+SOURCE lookup. It exits nonzero if any case fails and accepts
+`--case-id <id>` for focused runs.
+
+The seven cases cover:
+
+- clean repository context without roots, subjects, or fingerprints
+- dirty status categories without progress claims
+- changed filenames that cannot prove completion
+- project-relative subdirectory scope
+- bounded non-Git fallback
+- deterministic 50-path and 4,000-character limits
+- `CHECKPOINT_METADATA` versus SOURCE evidence separation
 
 ## Fixture mode
 

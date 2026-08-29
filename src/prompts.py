@@ -1,10 +1,28 @@
 EXTRACT_PROJECT_STATE_PROMPT = """You are a project memory extraction assistant.
 
-Your task is to extract a structured ProjectState JSON object from the provided project notes.
+Your task is to extract a structured ProjectState JSON object from the provided
+project notes and the separately delimited checkpoint-time Git metadata.
 
 Grounding rules:
-- Only use information from the provided notes.
+- Use project sources for project meaning, progress, findings, decisions, and
+  planned actions. Git metadata may support repository facts only.
 - Do not invent facts, experiments, failures, decisions, or next actions.
+
+Git metadata boundary:
+- CHECKPOINT_GIT_CONTEXT is a bounded snapshot collected at checkpoint time. It
+  is not the live repository state at question or memo time.
+- A staged, unstaged, untracked, conflicted, changed, or deleted path proves
+  only that Git recorded that path in that status category.
+- A changed filename does not prove that a feature was implemented, a test
+  passed, a bug was fixed, a decision was made, or work was completed.
+- A dirty working tree is not evidence of progress and must not create a
+  confirmed finding, failed attempt, important decision, or next action.
+- A branch name does not prove that its named milestone or feature is complete.
+- A HEAD identifier does not reveal or prove commit contents.
+- A deleted path does not by itself prove that a capability was removed.
+- Git metadata must not override clearer project-source evidence. If the two
+  appear inconsistent, preserve the uncertainty rather than resolving it.
+- Never turn changed paths into next_actions.
 
 Field semantics:
 - Separate confirmed findings from tentative hypotheses.
@@ -43,6 +61,7 @@ Evidence source rules:
 - Do not invent section names such as "Experiments", "Failure Analysis", or "Current Status" as evidence sources.
 - If no SOURCE markers are present, use the provided Project notes source path as the evidence source.
 - Evidence supporting a next action must point to the source artifact where that planned action is stated or directly grounded.
+- {metadata_evidence_rule}
 
 Output rules:
 - The output must be valid JSON only.
@@ -75,6 +94,11 @@ Project notes source:
 
 Project notes:
 {notes}
+
+Checkpoint-time Git metadata:
+--- BEGIN CHECKPOINT_GIT_CONTEXT ---
+{git_context}
+--- END CHECKPOINT_GIT_CONTEXT ---
 """
 
 QUERY_SOURCE_LOOKUP_INSTRUCTIONS = """
@@ -114,6 +138,13 @@ and progress_since_last.md as checkpoint memory. Do not use outside knowledge
 or invent facts. If the requested answer is absent, say what information is
 missing. Distinguish supported statements from uncertainty and keep the answer
 concise and useful.
+
+If project_state.json records evidence from CHECKPOINT_METADATA:
+git_context.json, treat it only as a checkpoint-time repository snapshot.
+Changed paths or a dirty worktree do not prove implementation, progress,
+completion, test results, decisions, or planned actions. Do not describe this
+snapshot as the current live worktree; direct users to pma freshness for a
+current deterministic comparison.
 
 Schema-aware answering:
 - First map the user's question to one or more relevant ProjectState fields:
@@ -184,6 +215,10 @@ project report.
 Use only the latest checkpoint memory provided below. Source artifacts are the
 underlying truth, while ProjectState is a derived snapshot and the primary
 state source for this memo.
+
+Any CHECKPOINT_METADATA: git_context.json evidence inside ProjectState is a
+checkpoint-time repository snapshot only. Changed paths or a dirty worktree do
+not prove progress, implementation, completion, tests, decisions, or actions.
 
 Grounding rules:
 - Do not invent findings, decisions, failures, blockers, questions, or actions.
@@ -273,6 +308,10 @@ provided below. Do not claim to summarize multiple checkpoint runs, multiple
 days, or a reporting window. The latest project_state.json is authoritative
 for current state. The latest progress_since_last.md, when available, is
 authoritative only for progress since the immediately previous checkpoint.
+
+Any CHECKPOINT_METADATA: git_context.json evidence inside ProjectState is a
+checkpoint-time repository snapshot only. Changed paths or a dirty worktree do
+not prove progress, implementation, completion, tests, decisions, or actions.
 
 Grounding rules:
 - Do not invent findings, decisions, failures, blockers, questions, or actions.
@@ -365,6 +404,11 @@ runs. The latest project_state.json remains authoritative for current project
 state. Selected historical progress_since_last.md files may be used only to
 summarize what happened during the reporting window. Historical progress must
 not override latest ProjectState.
+
+Any CHECKPOINT_METADATA: git_context.json evidence inside latest ProjectState
+is a checkpoint-time repository snapshot only. Changed paths or a dirty
+worktree do not prove progress, implementation, completion, tests, decisions,
+or actions.
 
 Window rules:
 - Deduplicate repeated progress items across selected runs.
@@ -472,6 +516,11 @@ This is the Step 4C date-window update for checkpoint runs on or after
 current project state. Selected historical progress_since_last.md files may be
 used only to summarize what happened during the reporting window. Historical
 progress cannot override latest ProjectState.
+
+Any CHECKPOINT_METADATA: git_context.json evidence inside latest ProjectState
+is a checkpoint-time repository snapshot only. Changed paths or a dirty
+worktree do not prove progress, implementation, completion, tests, decisions,
+or actions.
 
 Window and conflict rules:
 - Selected progress entries are ordered chronologically from oldest to newest.

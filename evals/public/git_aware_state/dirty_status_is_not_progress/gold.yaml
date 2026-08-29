@@ -1,0 +1,15 @@
+case_id: dirty_status_is_not_progress
+case_type: git_aware_state
+capability: status-only dirty snapshot
+required_includes:
+  - "working_tree: dirty"
+  - "staged_count: 1"
+  - "unstaged_count: 1"
+  - "untracked_count: 1"
+  - "[staged] README.md"
+  - "[unstaged] src/core.py"
+  - "[untracked] notes/todo.md"
+forbidden_includes:
+  - "work completed"
+  - "tests passed"
+max_chars: 4000

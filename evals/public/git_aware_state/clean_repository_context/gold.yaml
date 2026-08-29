@@ -1,0 +1,13 @@
+case_id: clean_repository_context
+case_type: git_aware_state
+capability: bounded clean repository snapshot
+required_includes:
+  - "repository_available: yes"
+  - "snapshot_scope: checkpoint_time_only"
+  - "working_tree: clean"
+  - "changed_path_count: 0"
+forbidden_includes:
+  - "/home/synthetic"
+  - "private commit subject"
+  - "sha256"
+max_chars: 4000

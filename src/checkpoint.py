@@ -77,12 +77,16 @@ def generate_checkpoint_outputs(
     combined_notes_path = output_dir / "combined_notes.md"
     combined_notes_path.write_text(combined_notes, encoding="utf-8")
 
+    # Persist deterministic metadata even if the later OpenAI extraction fails.
+    write_git_context(git_context, output_dir)
+
     # 3. Extract ProjectState
     project_state_path = output_dir / "project_state.json"
     state: ProjectState = extract_state(
         input_path=combined_notes_path,
         output_path=project_state_path,
         model=model,
+        git_context=git_context,
     )
 
     # 4. Render Project State Card
@@ -97,9 +101,6 @@ def generate_checkpoint_outputs(
     )
     checkpoint_summary_path = output_dir / "checkpoint_summary.md"
     checkpoint_summary_path.write_text(checkpoint_summary, encoding="utf-8")
-
-    # Git context is deterministic checkpoint metadata, not LLM input.
-    write_git_context(git_context, output_dir)
 
     print(f"Artifacts found: {len(artifact_index.artifacts)}")
     print(f"Output dir: {output_dir}")

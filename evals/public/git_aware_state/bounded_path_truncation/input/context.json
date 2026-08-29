@@ -1,0 +1,29 @@
+{
+  "context": {
+    "schema_version": 2,
+    "available": true,
+    "branch": "many-files",
+    "head_commit_short": "eeeeeee",
+    "working_tree_clean": false,
+    "detached_head": false,
+    "staged_files": [],
+    "unstaged_files": [],
+    "untracked_files": [
+      "src/file_054.py", "src/file_053.py", "src/file_052.py", "src/file_051.py",
+      "src/file_050.py", "src/file_049.py", "src/file_048.py", "src/file_047.py",
+      "src/file_046.py", "src/file_045.py", "src/file_044.py", "src/file_043.py",
+      "src/file_042.py", "src/file_041.py", "src/file_040.py", "src/file_039.py",
+      "src/file_038.py", "src/file_037.py", "src/file_036.py", "src/file_035.py",
+      "src/file_034.py", "src/file_033.py", "src/file_032.py", "src/file_031.py",
+      "src/file_030.py", "src/file_029.py", "src/file_028.py", "src/file_027.py",
+      "src/file_026.py", "src/file_025.py", "src/file_024.py", "src/file_023.py",
+      "src/file_022.py", "src/file_021.py", "src/file_020.py", "src/file_019.py",
+      "src/file_018.py", "src/file_017.py", "src/file_016.py", "src/file_015.py",
+      "src/file_014.py", "src/file_013.py", "src/file_012.py", "src/file_011.py",
+      "src/file_010.py", "src/file_009.py", "src/file_008.py", "src/file_007.py",
+      "src/file_006.py", "src/file_005.py", "src/file_004.py", "src/file_003.py",
+      "src/file_002.py", "src/file_001.py", "src/file_000.py"
+    ],
+    "conflicted_files": []
+  }
+}

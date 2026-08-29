@@ -1,0 +1,10 @@
+{
+  "context": {
+    "schema_version": 2,
+    "available": false,
+    "reason": "not_a_git_repository",
+    "repository_root": "/tmp/private-project",
+    "working_tree_clean": null,
+    "detached_head": null
+  }
+}

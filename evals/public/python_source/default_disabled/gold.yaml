@@ -1,0 +1,14 @@
+case_id: default_disabled
+case_type: python_source
+capability: explicit_opt_in
+expected_exit_code: 0
+expected_paths: [README.md]
+expected_statuses:
+  README.md: parsed
+required_includes:
+  - "<!-- SOURCE: README.md -->"
+  - "Python source scanning is not enabled."
+forbidden_includes:
+  - "service.py"
+  - "DEFAULT_DISABLED_SENTINEL"
+  - "Traceback"

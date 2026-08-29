@@ -1,0 +1,16 @@
+case_id: sensitive_literals_redacted
+case_type: python_source
+capability: literal_redaction
+expected_exit_code: 0
+expected_paths: [service.py]
+expected_statuses:
+  service.py: parsed
+required_includes:
+  - "function `build(token = ...) -> Literal[...]`"
+forbidden_includes:
+  - "TOKEN_CONSTANT_SENTINEL"
+  - "DECORATOR_ARGUMENT_SENTINEL"
+  - "DEFAULT_ARGUMENT_SENTINEL"
+  - "ANNOTATION_LITERAL_SENTINEL"
+  - "BODY_RETURN_SENTINEL"
+  - "Traceback"

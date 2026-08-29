@@ -22,6 +22,7 @@ class ScannerConfigError(ValueError):
 class ScannerConfig:
     include_patterns: tuple[str, ...] = ()
     exclude_patterns: tuple[str, ...] = ()
+    include_python: bool = False
 
 
 def _validate_patterns(value: object, field: str, config_path: Path) -> tuple[str, ...]:
@@ -59,7 +60,7 @@ def load_scanner_config(project_dir: Path) -> ScannerConfig:
     if not isinstance(scanner, dict):
         raise ScannerConfigError(f"{config_path}: [scanner] must be a table.")
 
-    unknown_keys = set(scanner) - {"include", "exclude"}
+    unknown_keys = set(scanner) - {"include", "exclude", "include_python"}
     if unknown_keys:
         key = sorted(unknown_keys)[0]
         raise ScannerConfigError(
@@ -68,7 +69,16 @@ def load_scanner_config(project_dir: Path) -> ScannerConfig:
 
     include = _validate_patterns(scanner.get("include", []), "include", config_path)
     exclude = _validate_patterns(scanner.get("exclude", []), "exclude", config_path)
-    return ScannerConfig(include_patterns=include, exclude_patterns=exclude)
+    include_python = scanner.get("include_python", False)
+    if type(include_python) is not bool:
+        raise ScannerConfigError(
+            f"{config_path}: [scanner].include_python must be a boolean."
+        )
+    return ScannerConfig(
+        include_patterns=include,
+        exclude_patterns=exclude,
+        include_python=include_python,
+    )
 
 
 def normalize_relative_path(path: Path | PurePosixPath | str) -> str:

@@ -12,8 +12,10 @@ and group-update memos from the latest checkpoint.
 This is the v0.1.1 code baseline: useful enough to dogfood, intentionally
 small, and still explicit about its limits. Phase 1 adds a reproducible package
 build and clean-install smoke check, cross-layout scanner dogfooding, and a
-separate deterministic status-note eval suite. The version number describes
-the repository state; it does not claim that v0.1.1 has been published.
+separate deterministic status-note eval suite. Phase 2 adds opt-in, bounded
+Python source structure extraction without executing project code. The version
+number describes the repository state; it does not claim that v0.1.1 has been
+published.
 
 ## Why it exists
 
@@ -249,21 +251,27 @@ are seven cases total, not 21 separate cases:
 | Level | Description | Result |
 |---|---|---:|
 | Level 0 | Fixture rule eval over checked-in canonical outputs | 7/7 |
-| Level 1 | Live-command rule eval using `pma ask` / `pma memo` | Previously 7/7; not rerun in Phase 0 or Phase 1 |
-| Level 2a | Fixture + optional LLM judge | Previously 7/7; not rerun in Phase 0 or Phase 1 |
-| Level 2b | Live-command + optional LLM judge | Previously 7/7; not rerun in Phase 0 or Phase 1 |
+| Level 1 | Live-command rule eval using `pma ask` / `pma memo` | Previously 7/7; not rerun in Phase 0, 1, or 2 |
+| Level 2a | Fixture + optional LLM judge | Previously 7/7; not rerun in Phase 0, 1, or 2 |
+| Level 2b | Live-command + optional LLM judge | Previously 7/7; not rerun in Phase 0, 1, or 2 |
 
 Status-note evaluation is a separate six-case deterministic suite. It covers a
 missing-latest TODO template, progress-over-summary precedence, summary
 fallback, named canonical layout resolution, overwrite refusal, and forced
 replacement. These six cases are not part of the seven query/memo cases.
 
+Python source evaluation is another separate seven-case deterministic suite.
+It covers structure extraction, class methods and bases, literal redaction,
+bounded syntax failures, default-off behavior, include/exclude scoping, and
+proof that scanned top-level side effects are not executed.
+
 Current release checks:
 
 - Query/memo eval tests: 13 passed.
 - Query/memo fixture evaluation: 7/7 passed.
 - Status-note evaluation: 6/6 passed without OpenAI.
-- Full test suite: 228 passed, including 32 subtests under pytest.
+- Python source evaluation: 7/7 passed without OpenAI.
+- Full test suite: 253 passed, including 32 subtests under pytest.
 - Scanner dogfooding covers root documents, nested document conventions, and
   mixed repositories with private/generated/checkpoint paths.
 - Wheel and sdist build passed; the wheel installed in a clean temporary
@@ -283,6 +291,7 @@ The scanner only includes supported text-like artifact types:
 - `.log`
 - `.csv`
 - `.json`
+- `.py`, only when `[scanner].include_python = true`
 
 It uses explicit scanner-level ignore rules rather than treating `.gitignore`
 as the contract. Universal rules exclude secrets, caches, default or resolved
@@ -301,14 +310,16 @@ list adds no restriction.
 
 ```toml
 [scanner]
-include = ["README.md", "docs/**/*.md", "results/**/*.json"]
+include_python = true
+include = ["README.md", "docs/**/*.md", "results/**/*.json", "src/**/*.py"]
 exclude = ["results/debug/**", "archive/**"]
 ```
 
 Patterns use POSIX-style project-relative paths. `**` matches zero or more path
 segments, so `docs/**/*.md` includes both `docs/overview.md` and nested Markdown
 files. Configuration cannot override built-in safety ignores, and matching does
-not expand the supported file types (`.md`, `.txt`, `.log`, `.csv`, and `.json`).
+not expand the always-on supported file types (`.md`, `.txt`, `.log`, `.csv`,
+and `.json`). Python additionally requires the explicit boolean opt-in.
 Malformed configuration, unknown sections, or unknown scanner keys stop the
 checkpoint command before it writes checkpoint output. When the resolved
 checkpoint root is inside the project, that entire generated root is excluded
@@ -316,11 +327,47 @@ before user include rules are evaluated. The `.project_memory` ignore remains
 as a default/backward-compatible safety rule, but custom output names are also
 excluded automatically.
 
+Python source remains disabled unless `include_python = true` is present and is
+a boolean. An include glob such as `src/**/*.py` cannot enable Python scanning
+by itself. Once enabled, Python files still pass through include/exclude rules,
+built-in safety ignores, supported-extension checks, symlink rejection, and
+active checkpoint-root exclusion.
+
 Phase 1 dogfoods this contract against synthetic repositories with root-level
 documents, nested `docs`/`notes`/`research` conventions, and mixed source,
 private, generated, and checkpoint directories. Repeated scans must preserve a
 stable project-relative ordering. External checkpoint storage does not alter
 the selected project artifacts or expose its path through artifact labels.
+
+### Bounded Python source awareness
+
+Phase 2 uses the standard-library AST parser to create a structural preview. It
+never imports, executes, evaluates, or launches scanned source. The preview may
+contain the first bounded module-docstring summary, top-level import module
+names, statically declared `__all__` names, public top-level classes and
+functions, class bases, public methods, parameter names/kinds, and safe type
+annotations.
+
+Function and method bodies, module constants, decorator arguments, ordinary
+string literals, and actual default argument values are not included. Defaults
+are rendered as `...`; literal values inside annotations are also rendered as
+`...`. Private and dunder definitions are omitted by policy.
+
+The deterministic limits are:
+
+- 262,144 bytes per Python file
+- 4,000 characters per structural preview
+- 240 characters for the module-docstring summary
+- 20 top-level imports
+- 40 public top-level definitions
+- 20 public methods per class
+
+Syntax, decoding, size, read, and symlink failures do not echo source content or
+produce tracebacks. Failed Python artifacts receive a bounded failure status in
+the artifact index and are excluded from `combined_notes.md`; other safe
+artifacts continue through checkpoint construction. Successful Python previews
+retain the normal project-relative SOURCE marker, so later ask/memo behavior
+still operates only on derived checkpoint memory.
 
 ### Git context
 
@@ -380,7 +427,10 @@ field when scripting.
 - `ask` and `memo` answer from derived checkpoint memory, not arbitrary raw
   artifact retrieval.
 - There is no vector database or broad RAG layer.
-- The scanner does not parse `.py` source files directly in v0.1.
+- Python structure extraction is opt-in and supports only Python; other source
+  languages remain unsupported.
+- Python extraction is intentionally structural. It does not include function
+  bodies, call graphs, runtime values, type inference, or import inspection.
 - `status-note` exists because checkpoint scanning reads text artifacts and
   does not infer every important milestone directly from source code changes.
 - The optional query/memo judge is not default, does not read full fixture
@@ -410,3 +460,11 @@ directory, installs the wheel into a clean temporary virtual environment, then
 runs command help plus `brief`, `freshness`, and `status-note` missing-checkpoint
 smokes from outside the repository. It does not publish artifacts or call
 OpenAI.
+
+Run the separate deterministic Python source evaluation with:
+
+```bash
+python evals/scripts/run_python_source_eval.py \
+  --eval-root evals/public/python_source \
+  --output-root evals/outputs
+```

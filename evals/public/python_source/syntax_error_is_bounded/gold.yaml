@@ -1,0 +1,14 @@
+case_id: syntax_error_is_bounded
+case_type: python_source
+capability: bounded_parse_failure
+expected_exit_code: 0
+expected_paths: [broken.py]
+expected_statuses:
+  broken.py: failed
+required_includes:
+  - "Python source unavailable: syntax_error at line 1."
+forbidden_includes:
+  - "SYNTAX_ERROR_LITERAL_SENTINEL"
+  - "def broken"
+  - "Traceback"
+  - "/tmp/"

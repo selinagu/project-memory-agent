@@ -1,0 +1,17 @@
+case_id: no_code_execution
+case_type: python_source
+capability: no_runtime_execution
+expected_exit_code: 0
+expected_paths: [side_effect.py]
+expected_statuses:
+  side_effect.py: parsed
+forbidden_created_paths:
+  - EXECUTED_SENTINEL
+required_includes:
+  - "function `safe_structure_only()`"
+  - "- pathlib"
+forbidden_includes:
+  - "EXECUTED_SENTINEL"
+  - "source was executed"
+  - "FUNCTION_BODY_SENTINEL"
+  - "Traceback"

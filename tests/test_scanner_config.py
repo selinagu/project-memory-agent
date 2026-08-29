@@ -38,6 +38,16 @@ class ScannerConfigLoadingTests(unittest.TestCase):
         self.assertEqual(config.include_patterns, ("docs/**",))
         self.assertEqual(config.exclude_patterns, ("docs/drafts/**",))
 
+    def test_loads_python_opt_in(self):
+        config = self.load(
+            '[scanner]\ninclude_python = true\ninclude = ["src/**/*.py"]\n'
+        )
+        self.assertTrue(config.include_python)
+        self.assertEqual(config.include_patterns, ("src/**/*.py",))
+
+    def test_python_scanning_defaults_to_disabled(self):
+        self.assertFalse(self.load("[scanner]\n").include_python)
+
     def test_empty_lists_have_no_restrictions(self):
         self.assertEqual(
             self.load("[scanner]\ninclude = []\nexclude = []\n"), ScannerConfig()
@@ -62,6 +72,12 @@ class ScannerConfigLoadingTests(unittest.TestCase):
 
     def test_rejects_unknown_scanner_key(self):
         self.assert_invalid("[scanner]\nincludes = []\n", "unknown key")
+
+    def test_rejects_non_boolean_python_opt_in(self):
+        self.assert_invalid(
+            '[scanner]\ninclude_python = "true"\n',
+            "include_python must be a boolean",
+        )
 
 
 class ScannerGlobTests(unittest.TestCase):

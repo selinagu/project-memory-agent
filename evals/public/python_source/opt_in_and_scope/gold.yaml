@@ -1,0 +1,19 @@
+case_id: opt_in_and_scope
+case_type: python_source
+capability: include_exclude_scope
+expected_exit_code: 0
+expected_paths: [README.md, src/main.py]
+expected_statuses:
+  README.md: parsed
+  src/main.py: parsed
+required_includes:
+  - "<!-- SOURCE: README.md -->"
+  - "<!-- SOURCE: src/main.py -->"
+  - "function `included(value)`"
+forbidden_includes:
+  - "src/private/secrets.py"
+  - "PRIVATE_SCOPE_SENTINEL"
+  - "tests/sample_checks.py"
+  - "TEST_SCOPE_SENTINEL"
+  - "image.png"
+  - "Traceback"

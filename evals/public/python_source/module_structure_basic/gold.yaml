@@ -1,0 +1,18 @@
+case_id: module_structure_basic
+case_type: python_source
+capability: module_structure
+expected_exit_code: 0
+expected_paths: [src/module.py]
+expected_statuses:
+  src/module.py: parsed
+required_includes:
+  - "<!-- SOURCE: src/module.py -->"
+  - "Module docstring: Synthetic module structure example."
+  - "- os"
+  - "- package.tools"
+  - "function `transform(value: int, option = ...) -> str`"
+  - "async function `fetch(item, *, timeout: float = ...)`"
+forbidden_includes:
+  - "DEFAULT_LITERAL_SENTINEL"
+  - "BODY_LITERAL_SENTINEL"
+  - "Traceback"

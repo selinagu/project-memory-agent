@@ -1,0 +1,8 @@
+from typing import Literal
+
+TOKEN = "TOKEN_CONSTANT_SENTINEL"
+
+
+@route("DECORATOR_ARGUMENT_SENTINEL")
+def build(token="DEFAULT_ARGUMENT_SENTINEL") -> Literal["ANNOTATION_LITERAL_SENTINEL"]:
+    return "BODY_RETURN_SENTINEL"

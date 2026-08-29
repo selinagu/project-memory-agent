@@ -13,12 +13,19 @@ tool while keeping checkpoint inputs safe, scoped, and auditable.
 
 ## Current stage
 
-Phase 1 has completed an OpenAI-free release-readiness pass on top of the Phase
-0 v0.1.1 reliability baseline. PMA now has a reproducible wheel/sdist build and
-clean-wheel installation smoke, synthetic scanner dogfooding across three
-repository conventions, and a separate six-case deterministic status-note eval
-suite. The release smoke runs the installed `pma` entry point outside the source
-repository and verifies command help plus ordinary missing-checkpoint behavior.
+Phase 2 has completed an OpenAI-free bounded Python source-awareness pass on top
+of the Phase 1 release-readiness baseline. Python scanning is explicit opt-in
+through `[scanner].include_python = true`; the default scanner contract and PMA
+repo-self-scan remain unchanged. Enabled Python files are summarized through a
+deterministic standard-library AST extractor rather than raw source inclusion.
+
+The extractor records bounded structural information such as imports, public
+classes/functions/methods, signatures, bases, safe annotations, a short module
+docstring summary, and static `__all__` names. It does not import or execute
+project code and does not expose function bodies, ordinary constants, decorator
+arguments, or actual default values. Successful previews retain SOURCE markers
+in `combined_notes.md`; safe failures remain visible in the artifact index but
+do not enter LLM context.
 
 The clean-install pass found and fixed a packaging defect that source/editable
 tests could not detect: `checkpoint_reader.py` was missing from the setuptools
@@ -38,20 +45,26 @@ that old snapshot.
 
 ## Current validation
 
-- Query/memo Level 0 fixture rule eval: 7/7 pass in Phase 1.
-- Earlier live-command and optional-judge runs recorded 7/7; Phase 1 did not
+- Query/memo Level 0 fixture rule eval: 7/7 pass in Phase 2.
+- Earlier live-command and optional-judge runs recorded 7/7; Phase 2 did not
   rerun OpenAI-backed modes.
 - These are the same 7 query/memo cases across evaluation layers, not 21
   separate cases.
 - Status-note deterministic eval: 6/6 pass. This is a separate suite and is not
   included in the query/memo case count.
+- Python source deterministic eval: 7/7 pass. This is also a separate suite.
 - Query/memo eval tests: 13 passed.
-- Full test suite: 228 passed, with 32 pytest subtests also passing.
+- Full test suite: 253 passed, with 32 pytest subtests also passing.
 - Scanner-focused regression and dogfood tests: 36 passed.
 - Wheel and sdist build: passed.
 - Clean wheel install and installed CLI smoke outside the repository: passed.
 - Compilation passed.
 - `git diff --check` passed.
+
+PMA's default repo-self-scan still selects exactly four public project sources:
+`PROJECT_STATUS.md`, `README.md`,
+`data/examples/synthetic_cache_router_state.json`, and `evals/README.md`.
+Python scanning has not been enabled in PMA's own root `pma.toml`.
 
 ## Scanner safety milestone
 
@@ -124,8 +137,8 @@ repo-level checkpointing has an explicit project-status anchor.
 The corrected checkpoint rerun completed successfully with 4 scanned artifacts:
 `PROJECT_STATUS.md`, `README.md`,
 `data/examples/synthetic_cache_router_state.json`, and `evals/README.md`. The
-resulting `ProjectState` focuses on Project Memory Agent. The current Phase 0
-validation results are recorded above; the old checkpoint itself has not been
+resulting `ProjectState` focuses on Project Memory Agent. The current validation
+results are recorded above; the old checkpoint itself has not been
 regenerated in this pass.
 
 ## Important design finding
@@ -179,6 +192,22 @@ top-level and subcommand help, `brief --json`, `freshness --json`, and a
 non-writing `status-note` preview without checkpoint memory. The rehearsal does
 not publish artifacts, modify release services, or call OpenAI.
 
+## Phase 2 bounded Python source awareness
+
+The Python extractor enforces a 262,144-byte input limit, a 4,000-character
+preview limit, a 240-character module-docstring limit, at most 20 imports, 40
+public top-level definitions, and 20 public methods per class. Default values
+and literal annotation values render as `...`. Private and dunder definitions
+are omitted by policy. Syntax, decoding, size, read, and symlink failures use
+bounded error codes without source excerpts or local absolute paths.
+
+The separate seven-case public evaluation covers module structure, class bases
+and methods, sensitive-literal redaction, bounded syntax failure, default-off
+behavior, opt-in include/exclude scope, and non-execution of top-level source
+side effects. Additional unit coverage checks encoding cookies, parameter kinds,
+deterministic symbol truncation, oversized sources, external file symlinks, and
+mocked checkpoint SOURCE provenance.
+
 ## Known limitations
 
 - Query/memo judge mode is optional and not default.
@@ -187,14 +216,19 @@ not publish artifacts, modify release services, or call OpenAI.
   version.
 - The scanner uses explicit allow/ignore rules rather than `.gitignore` as its
   contract.
-- The scanner does not parse `.py` source files directly.
+- Python source awareness is opt-in and intentionally structural; it does not
+  inspect function bodies, infer types, build call graphs, or follow imports.
+- Non-Python programming languages remain unsupported.
 
 ## Source-grounded next actions
 
 - Keep public examples synthetic and exclude any private/raw project data from
   release scope.
-- Review the Phase 1 diff and decide whether to commit it as the v0.1.1 release
-  readiness pass.
+- Phase 1 release readiness was committed as `6b6d2f1`.
+- Review the Phase 2 bounded-source contract before enabling it in real project
+  configurations.
+- Consider versioning the opt-in Python capability as v0.2.0; Phase 2 did not
+  change the current v0.1.1 package version.
 - Decide whether author, license, and project URL metadata should be added
   before an actual package publication; Phase 1 did not invent these values.
 - Regenerate the PMA repo checkpoint only after separately approving an OpenAI

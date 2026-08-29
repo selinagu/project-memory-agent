@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+import os
 from pathlib import Path
 
 from scan_project import scan_project
@@ -141,6 +142,88 @@ class ScanProjectConfigTests(unittest.TestCase):
         self.assertNotIn("src/project_memory_agent.egg-info/SOURCES.txt", paths)
         self.assertNotIn("script.py", paths)
         self.assertNotIn("docs/image.png", paths)
+
+    def test_python_include_pattern_does_not_bypass_opt_in(self):
+        paths = self.scan(ScannerConfig(("**",)))
+        self.assertNotIn("script.py", paths)
+
+    def test_python_opt_in_respects_include_and_exclude(self):
+        paths = self.scan(
+            ScannerConfig(
+                include_patterns=("docs/**", "script.py"),
+                exclude_patterns=("docs/image.png",),
+                include_python=True,
+            )
+        )
+        self.assertIn("script.py", paths)
+        self.assertIn("docs/overview.md", paths)
+        self.assertNotIn("docs/image.png", paths)
+
+    def test_python_parse_failure_is_safe_and_recorded(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            secret = "syntax-error-secret"
+            (root / "broken.py").write_text(
+                f'def broken(:\n    value = "{secret}"\n',
+                encoding="utf-8",
+            )
+            index = scan_project(
+                root,
+                ScannerConfig(include_python=True),
+            )
+
+        self.assertEqual(len(index.artifacts), 1)
+        artifact = index.artifacts[0]
+        self.assertEqual(artifact.artifact_type, "python")
+        self.assertEqual(artifact.parser_status, "failed")
+        self.assertIn("syntax_error", artifact.content_preview)
+        self.assertNotIn(secret, artifact.content_preview)
+
+    def test_oversized_python_is_bounded_and_recorded_as_failed(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "large.py").write_bytes(b"x" * 262_145)
+            index = scan_project(root, ScannerConfig(include_python=True))
+
+        self.assertEqual(len(index.artifacts), 1)
+        artifact = index.artifacts[0]
+        self.assertEqual(artifact.parser_status, "failed")
+        self.assertIn("size_limit", artifact.content_preview)
+
+    def test_symlink_files_are_not_scanned_for_markdown_or_python(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "project"
+            external = Path(temp_dir) / "external"
+            root.mkdir()
+            external.mkdir()
+            (external / "outside.md").write_text("external markdown", encoding="utf-8")
+            (external / "outside.py").write_text(
+                'SECRET = "external-python-secret"\n',
+                encoding="utf-8",
+            )
+            try:
+                os.symlink(external / "outside.md", root / "linked.md")
+                os.symlink(external / "outside.py", root / "linked.py")
+            except OSError as exc:
+                self.skipTest(f"symlinks unavailable: {exc}")
+
+            index = scan_project(root, ScannerConfig(include_python=True))
+
+        self.assertEqual(
+            [artifact.path for artifact in index.artifacts],
+            ["linked.md", "linked.py"],
+        )
+        self.assertTrue(
+            all(artifact.parser_status == "failed" for artifact in index.artifacts)
+        )
+        self.assertTrue(
+            all(
+                artifact.content_preview == "[Artifact unavailable: symbolic_link.]"
+                for artifact in index.artifacts
+            )
+        )
+        self.assertNotIn("external markdown", str(index.model_dump()))
+        self.assertNotIn("external-python-secret", str(index.model_dump()))
 
     def test_config_is_loaded_relative_to_project_dir(self):
         with tempfile.TemporaryDirectory() as temp_dir:

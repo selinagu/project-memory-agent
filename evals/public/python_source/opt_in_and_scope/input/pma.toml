@@ -1,0 +1,4 @@
+[scanner]
+include_python = true
+include = ["README.md", "src/**/*.py"]
+exclude = ["src/private/**"]

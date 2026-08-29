@@ -1,0 +1,15 @@
+case_id: methods_and_bases
+case_type: python_source
+capability: class_structure
+expected_exit_code: 0
+expected_paths: [worker.py]
+expected_statuses:
+  worker.py: parsed
+required_includes:
+  - "class `Worker(BaseWorker, Protocol)`"
+  - "method `run(self, task: Task) -> Result`"
+  - "async method `stop(self, *, force = ...)`"
+forbidden_includes:
+  - "_private_helper"
+  - "PRIVATE_METHOD_SENTINEL"
+  - "Traceback"

@@ -73,6 +73,35 @@ class CheckpointScannerConfigTests(unittest.TestCase):
             self.assertEqual(marker.read_text(encoding="utf-8"), "unchanged")
             self.assertEqual(list(output_dir.iterdir()), [marker])
 
+    def test_invalid_python_opt_in_does_not_touch_output(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output_dir = root / "checkpoint"
+            output_dir.mkdir()
+            marker = output_dir / "existing.txt"
+            marker.write_text("unchanged", encoding="utf-8")
+            (root / "service.py").write_text("def run(): pass\n", encoding="utf-8")
+            (root / "pma.toml").write_text(
+                '[scanner]\ninclude_python = "yes"\n',
+                encoding="utf-8",
+            )
+            stderr = StringIO()
+            argv = [
+                "pma",
+                "--project-dir",
+                str(root),
+                "--output-dir",
+                str(output_dir),
+            ]
+
+            with patch.object(sys, "argv", argv), redirect_stderr(stderr):
+                with self.assertRaises(SystemExit) as raised:
+                    checkpoint.main()
+
+            self.assertEqual(raised.exception.code, 2)
+            self.assertIn("include_python must be a boolean", stderr.getvalue())
+            self.assertEqual(list(output_dir.iterdir()), [marker])
+
 
 if __name__ == "__main__":
     unittest.main()

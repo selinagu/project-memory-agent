@@ -12,6 +12,7 @@ from scanner_config import (
     normalize_relative_path,
 )
 from project_layout import CheckpointLayoutError, generated_output_prefixes, resolve_checkpoint_layout
+from python_source import PYTHON_MAX_BYTES, PythonSourceResult, extract_python_structure
 
 
 SUPPORTED_EXTENSIONS = {
@@ -20,6 +21,7 @@ SUPPORTED_EXTENSIONS = {
     ".log": "log",
     ".json": "json",
     ".csv": "csv",
+    ".py": "python",
 }
 
 
@@ -61,6 +63,10 @@ def read_preview(path: Path, max_chars: int = 500) -> str | None:
     if artifact_type == "unknown":
         return None
 
+    if artifact_type == "python":
+        result = _read_python_structure(path)
+        return result.content if result is not None else None
+
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
     except Exception:
@@ -71,6 +77,27 @@ def read_preview(path: Path, max_chars: int = 500) -> str | None:
         return ""
 
     return text[:max_chars]
+
+
+def _read_python_structure(path: Path) -> PythonSourceResult | None:
+    try:
+        with path.open("rb") as source:
+            raw = source.read(PYTHON_MAX_BYTES + 1)
+    except OSError:
+        return None
+    return extract_python_structure(raw)
+
+
+def _preview_and_status(path: Path, artifact_type: str) -> tuple[str | None, str]:
+    if artifact_type == "python":
+        result = _read_python_structure(path)
+        if result is None:
+            return None, "failed"
+        return result.content, result.status
+    preview = read_preview(path)
+    if preview is None:
+        return None, "failed"
+    return preview, "parsed"
 
 
 def scan_project(
@@ -92,12 +119,13 @@ def scan_project(
     records: list[ArtifactRecord] = []
 
     for path in sorted(project_dir.rglob("*")):
-        if not path.is_file():
-            continue
-
         relative_path = path.relative_to(project_dir)
 
         if should_ignore(relative_path):
+            continue
+
+        is_symlink = path.is_symlink()
+        if not is_symlink and not path.is_file():
             continue
 
         relative_posix = relative_path.as_posix()
@@ -110,6 +138,8 @@ def scan_project(
         artifact_type = detect_artifact_type(path)
         if artifact_type == "unknown":
             continue
+        if artifact_type == "python" and not scanner_config.include_python:
+            continue
 
         match_path = normalize_relative_path(relative_path)
         if (
@@ -120,13 +150,17 @@ def scan_project(
         if matches_any(match_path, scanner_config.exclude_patterns):
             continue
 
-        stat = path.stat()
+        stat = path.lstat() if is_symlink else path.stat()
         modified_time = datetime.fromtimestamp(
             stat.st_mtime,
             tz=timezone.utc,
         ).isoformat()
 
-        preview = read_preview(path)
+        if is_symlink:
+            preview = "[Artifact unavailable: symbolic_link.]"
+            parser_status = "failed"
+        else:
+            preview, parser_status = _preview_and_status(path, artifact_type)
 
         record = ArtifactRecord(
             path=match_path,
@@ -134,7 +168,7 @@ def scan_project(
             size_bytes=stat.st_size,
             modified_time=modified_time,
             content_preview=preview,
-            parser_status="parsed" if preview is not None else "failed",
+            parser_status=parser_status,
         )
         records.append(record)
 

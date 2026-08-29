@@ -10,7 +10,9 @@ class ArtifactRecord(BaseModel):
     )
     artifact_type: str = Field(
         ...,
-        description="Artifact type, such as markdown, text, log, json, csv, or unknown."
+        description=(
+            "Artifact type, such as markdown, text, log, json, csv, python, or unknown."
+        )
     )
     size_bytes: int
     modified_time: str

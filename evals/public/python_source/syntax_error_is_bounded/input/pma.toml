@@ -1,0 +1,3 @@
+[scanner]
+include_python = true
+include = ["broken.py"]

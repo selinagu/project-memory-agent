@@ -13,6 +13,7 @@ from artifacts import (
     ParsedArtifact,
     ParsedArtifactBundle,
 )
+from python_source import PYTHON_MAX_BYTES, extract_python_structure
 
 
 _MARKDOWN_HEADING_RE = re.compile(
@@ -275,6 +276,47 @@ def _parse_json(content: str) -> tuple[str, dict[str, Any], list[str]]:
 def parse_artifact(project_dir: Path, artifact: ArtifactRecord) -> ParsedArtifact:
     path = project_dir / artifact.path
     warnings: list[str] = []
+
+    if artifact.artifact_type == "python":
+        try:
+            if path.is_symlink():
+                raise OSError("symbolic links are not read")
+            with path.open("rb") as source:
+                raw_content = source.read(PYTHON_MAX_BYTES + 1)
+        except OSError as exc:
+            return ParsedArtifact(
+                path=artifact.path,
+                artifact_type=artifact.artifact_type,
+                content_hash="",
+                content_for_llm="[Python source unavailable: read_error.]",
+                metadata={
+                    "size_bytes": artifact.size_bytes,
+                    "modified_time": artifact.modified_time,
+                    "summary_strategy": "python_ast_structure",
+                    "failure_code": "read_error",
+                },
+                warnings=[f"Python source could not be read safely: {type(exc).__name__}."],
+            )
+
+        result = extract_python_structure(raw_content)
+        content_hash = (
+            hashlib.sha256(raw_content).hexdigest()
+            if len(raw_content) <= PYTHON_MAX_BYTES
+            else ""
+        )
+        metadata = {
+            "size_bytes": artifact.size_bytes,
+            "modified_time": artifact.modified_time,
+            **result.metadata,
+        }
+        return ParsedArtifact(
+            path=artifact.path,
+            artifact_type=artifact.artifact_type,
+            content_hash=content_hash,
+            content_for_llm=result.content,
+            metadata=metadata,
+            warnings=list(result.warnings),
+        )
 
     try:
         raw_content = path.read_bytes()

@@ -24,6 +24,13 @@ class PackagingMetadataTests(unittest.TestCase):
 
         self.assertEqual(declared, runtime_modules)
 
+    def test_source_distribution_manifest_includes_project_docs(self):
+        manifest = (REPO_ROOT / "MANIFEST.in").read_text(encoding="utf-8")
+
+        self.assertIn("include PROJECT_STATUS.md", manifest)
+        self.assertIn("recursive-include demo *.json *.md *.py *.txt *.yaml", manifest)
+        self.assertIn("recursive-include docs *.md", manifest)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -13,8 +13,12 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_TARGETS = (
     REPO_ROOT / "src",
     REPO_ROOT / "benchmarks",
+    REPO_ROOT / "demo",
+    REPO_ROOT / "docs",
     REPO_ROOT / "README.md",
+    REPO_ROOT / "PROJECT_STATUS.md",
     REPO_ROOT / "pyproject.toml",
+    REPO_ROOT / "MANIFEST.in",
 )
 TEXT_SUFFIXES = {
     ".cfg", ".csv", ".ini", ".json", ".md", ".py", ".toml", ".txt", ".yaml", ".yml",

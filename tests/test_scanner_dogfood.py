@@ -2,8 +2,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from project_layout import resolve_checkpoint_layout
 from scan_project import scan_project
 from scanner_config import ScannerConfigError
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def write_files(root: Path, paths: list[str]) -> None:
@@ -136,6 +140,19 @@ class ScannerDogfoodTests(unittest.TestCase):
 
         self.assertEqual(first, second)
         self.assertEqual(first, sorted(first))
+
+    def test_pma_self_scan_keeps_demo_docs_but_excludes_all_demo_fixtures(self):
+        layout = resolve_checkpoint_layout(REPO_ROOT)
+        paths = self.artifact_paths(
+            REPO_ROOT,
+            checkpoint_root=layout.checkpoint_root,
+        )
+
+        self.assertIn("demo/offline/README.md", paths)
+        self.assertIn("demo/live/README.md", paths)
+        self.assertIn("demo/live/narration.md", paths)
+        self.assertIn("docs/case-study-pma-dogfooding.md", paths)
+        self.assertFalse(any("/fixtures/" in path for path in paths if path.startswith("demo/")))
 
     def test_invalid_config_fails_before_scanning(self):
         with tempfile.TemporaryDirectory() as temp_dir:

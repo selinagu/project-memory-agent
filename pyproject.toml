@@ -24,6 +24,7 @@ pma = "pma:main"
 [tool.setuptools]
 package-dir = {"" = "src"}
 py-modules = [
+  "alignment_models",
   "artifacts",
   "artifact_manifest",
   "brief",

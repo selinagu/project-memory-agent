@@ -22,6 +22,13 @@ jobs:
           python-version: "${{ matrix.python-version }}"
       - run: python -m pip install --disable-pip-version-check -e ".[dev]"
       - run: python -m pytest -q
+      - name: Offline end-to-end smoke
+        run: python demo/offline/run_smoke.py --non-interactive
+      - name: Validate and prepare live-demo fixture without API calls
+        run: |
+          python demo/live/validate_fixture.py
+          python demo/live/prepare_live_demo.py --output /tmp/pma-live-demo-ci --update-output /tmp/pma-live-demo-update-ci.md
+          test -z "$(git -C /tmp/pma-live-demo-ci status --short)"
       - name: Offline benchmark smoke
         run: |
           python benchmarks/run_benchmark.py --profile tiny --seed 20260830 --warmups 0 --repetitions 1 --output /tmp/pma-benchmark-smoke
@@ -43,5 +50,5 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install --disable-pip-version-check -e ".[dev]"
       - run: python -m build --outdir dist
-      - run: python evals/scripts/check_release_privacy.py src benchmarks README.md pyproject.toml dist
+      - run: python evals/scripts/check_release_privacy.py src benchmarks demo docs README.md PROJECT_STATUS.md pyproject.toml MANIFEST.in dist
       - run: python evals/scripts/run_release_smoke.py

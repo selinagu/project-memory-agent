@@ -13,6 +13,43 @@ tool while keeping checkpoint inputs safe, scoped, and auditable.
 
 ## Current stage
 
+The P2 architecture and product-communication pass is complete on top of the P1
+scalability baseline. PMA now has a code-backed architecture description,
+explicit write/read/freshness and external-storage flows, module ownership and
+failure boundaries, a recorded P2 audit, and eight accepted architecture
+decision records. The records explain canonical layout, history/latest
+separation, generated-output isolation, bounded retrieval, freshness signals,
+opt-in Python awareness, the evidence boundary, and the deliberate deferral of
+autonomous loops and external integrations.
+
+The audit confirmed that CLI orchestration, canonical layout, checkpoint
+storage, bounded source lookup, and read-only freshness were already separated.
+Its automated dependency check also found one real cycle:
+`diff_states -> semantic_diff -> diff_states`. P2 moved the shared Pydantic
+alignment contracts into the foundation module `alignment_models`, preserving
+the prior `semantic_diff` names while making the runtime import graph acyclic.
+Six standard-library AST architecture tests now enforce module classification,
+cycle freedom, no reverse CLI dependency, foundation independence, and narrow
+checkpoint reader/store dependencies.
+
+P2 also adds a one-command offline end-to-end smoke, an engineered live-demo
+foundation, and a privacy-safe PMA-on-PMA dogfooding case study. The offline smoke copies a
+synthetic cache-service fixture into temporary storage, creates and publishes a
+real checkpoint, verifies it with brief, runs bounded SOURCE lookup through ask,
+changes `PROJECT_STATUS.md`, and proves that freshness becomes stale before
+brief recommends a replacement checkpoint. Fixed responses replace only the
+checkpoint and ask LLM boundaries; the scanner, parsers, manifest, storage,
+layout, query grounding, brief, and freshness implementations are real.
+
+The presentation-grade live demo is separate under `demo/live/`. It provides a
+synthetic five-artifact Git project, a later status update, versioned gold claims
+and source boundaries, an exact terminal command sequence, a 30–45 second silent
+storyboard, and a 2–3 minute narration script. Offline tooling validates privacy
+and evidence, prepares a clean temporary repository, and refuses unsafe reset
+targets. Optional rehearsal requires both `--confirm-live-calls` and an API key,
+writes sanitized machine-readable results outside the repository, and is never
+run by CI. This pass did not execute that live rehearsal or create media.
+
 The P1 scalability benchmark is complete on top of the P0 reliability
 baseline. A deterministic synthetic generator now covers 25, 100, 500, 1,000,
 and 2,500 total-file profiles with fixed-seed content, nested mixed artifact
@@ -95,18 +132,28 @@ that old snapshot.
 - Python source deterministic eval: 7/7 pass. This is also a separate suite.
 - Git-aware state deterministic eval: 7/7 pass. This is a fourth separate suite.
 - Reliability deterministic eval: 5/5 pass. This is a fifth separate suite.
-- Full test suite: 317 passed, with 39 pytest subtests also passing.
+- Full test suite: 333 passed, with 39 pytest subtests also passing.
+- Architecture boundary suite: 6/6 pass. It validates complete module
+  classification, an acyclic runtime graph, no reverse CLI imports, independent
+  foundation modules, and narrow checkpoint reader/store dependencies.
 - Query/memo eval tests: 13 passed.
-- Scanner-focused regression and dogfood tests: 36 passed.
+- Scanner-focused regression and dogfood tests: 37 passed.
+- Offline smoke tests: 2/2 pass with network sockets blocked, no API key,
+  unchanged fixtures, deterministic output, temporary cleanup, correct SOURCE
+  citation, and current-to-stale freshness transition.
+- Live-demo engineering tests: 6/6 pass. They cover immutable fixture validation,
+  exact scanner evidence, privacy, clean Git preparation, sentinel-gated reset,
+  unsafe destination rejection, update isolation, guarded rehearsal, and both
+  recording scripts without making a live model call.
 - Wheel and sdist build: passed.
 - Clean wheel install and installed CLI smoke outside the repository: passed.
 - Compilation passed.
 - `git diff --check` passed.
 
-PMA's default repo-self-scan now selects exactly five public project sources:
-`PROJECT_STATUS.md`, `README.md`,
-`benchmarks/README.md`, `data/examples/synthetic_cache_router_state.json`, and
-`evals/README.md`.
+PMA's repo-self-scan selects 21 public project/status/evaluation, architecture,
+decision, dogfooding, and demo-document sources. The synthetic demo fixture,
+private fixtures, generated outputs, and local checkpoint memory remain
+excluded.
 Python scanning has not been enabled in PMA's own root `pma.toml`.
 
 ## Scanner safety milestone
@@ -274,6 +321,42 @@ non-Git fallback, deterministic truncation, and metadata/SOURCE separation.
 Phase 3 did not run OpenAI-backed live or judge evals and did not regenerate the
 repository checkpoint.
 
+## P2 architecture and product communication
+
+`docs/architecture.md` is the canonical high-level architecture description and
+links to the audit and accepted ADRs. It describes the CLI-to-consumer data
+flow, transactional checkpoint publication, bounded query inputs, deterministic
+freshness, internal/external storage, module responsibilities, dependency
+rules, and failure behavior. README carries only the recruiter-friendly summary
+and links to the detailed material.
+
+`docs/architecture-audit.md` distinguishes already-correct boundaries, the
+cycle fixed in this phase, accepted technical debt, and deliberately deferred
+work. The project remains a flat `py_modules` distribution because a namespace
+migration would add compatibility risk without strengthening the current
+reliability boundary. `MANIFEST.in` includes the project status and Markdown
+architecture documentation in source distributions, and CI privacy-scans these
+release-facing documents.
+
+`demo/offline/run_smoke.py` is the executable deterministic reliability smoke.
+It runs from a source checkout or sdist with one command and removes its
+temporary project after completion. `demo/offline/README.md` records the
+real/fixed boundary. `demo/live/README.md`, `commands.txt`, `gold.yaml`, and
+`narration.md` define the presentation workflow and its acceptance criteria;
+the fixture validator and safe preparer run offline, while the guarded rehearsal
+requires explicit live-call authorization. `docs/case-study-pma-dogfooding.md` grounds
+the maintenance story in public source, tests, status, and Git history while
+explicitly avoiding external-user or private-project claims. Root scanner scope
+keeps the public demo documents but excludes `demo/**/fixtures/**` so synthetic
+project stories cannot dominate a future PMA checkpoint.
+
+The CI matrix runs the smoke and validates/prepares the live fixture explicitly
+without network calls. Source distributions include both demo foundations, architecture, ADR,
+and case-study documents; the release privacy gate scans them. P2 added no PMA
+product command, changed no version, did not invoke OpenAI, did not produce a
+video, and did not regenerate PMA checkpoint memory. All five deterministic
+eval suites retained their existing full-pass results.
+
 ## Known limitations
 
 - Query/memo judge mode is optional and not default.
@@ -291,11 +374,16 @@ repository checkpoint.
 - Latest and legacy directory replacement is failure-safe with backup/rollback,
   but PMA does not claim strict cross-platform atomic visibility for directory
   trees.
+- Runtime code remains a flat `py_modules` distribution rather than a
+  namespaced package; the module manifest and architecture classification are
+  enforced by tests.
 
 ## Source-grounded next actions
 
 - Keep public examples synthetic and exclude any private/raw project data from
   release scope.
+- Keep the architecture document, ADRs, and dependency classification aligned
+  whenever module ownership or storage/retrieval boundaries change.
 - Phase 1 release readiness was committed as `6b6d2f1`.
 - Review the Phase 2 bounded-source and Phase 3 Git-metadata contracts before
   enabling them in real project configurations.

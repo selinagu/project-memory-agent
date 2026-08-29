@@ -1,0 +1,17 @@
+{
+  "dataset": "synthetic-standard-workload",
+  "target_p95_latency_ms": 55.0,
+  "policies": {
+    "full_cache_refresh": {
+      "p95_latency_ms": 91.2,
+      "origin_qps_change_percent": 68.0,
+      "invalidation_coverage_percent": 100.0
+    },
+    "bounded_key_prefix": {
+      "p95_latency_ms": 48.7,
+      "origin_qps_change_percent": 7.4,
+      "invalidation_coverage_percent": 99.98
+    }
+  },
+  "selected_policy": "bounded_key_prefix"
+}

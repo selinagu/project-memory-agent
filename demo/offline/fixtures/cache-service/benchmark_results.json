@@ -1,0 +1,7 @@
+{
+  "dataset": "synthetic-mixed-workload",
+  "policy": "bounded-key-prefix-invalidation",
+  "p95_latency_ms": 42.8,
+  "target_p95_latency_ms": 50.0,
+  "result": "within_target"
+}

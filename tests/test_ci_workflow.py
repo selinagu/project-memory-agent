@@ -29,6 +29,10 @@ class CIWorkflowContractTests(unittest.TestCase):
             for step in self.workflow["jobs"]["test"]["steps"]
         )
         self.assertIn("python -m pytest -q", commands)
+        self.assertIn("python demo/offline/run_smoke.py --non-interactive", commands)
+        self.assertIn("python demo/live/validate_fixture.py", commands)
+        self.assertIn("python demo/live/prepare_live_demo.py", commands)
+        self.assertIn("git -C /tmp/pma-live-demo-ci status --short", commands)
         self.assertIn("benchmarks/run_benchmark.py", commands)
         self.assertIn("--profile tiny", commands)
         self.assertIn("--warmups 0", commands)
@@ -45,6 +49,7 @@ class CIWorkflowContractTests(unittest.TestCase):
         self.assertIn("--mode fixture", commands)
         self.assertNotIn("--mode live", commands)
         self.assertNotIn("--judge", commands)
+        self.assertNotIn("--confirm-live-calls", commands)
 
     def test_release_job_builds_scans_and_smoke_tests(self):
         commands = "\n".join(
@@ -53,7 +58,8 @@ class CIWorkflowContractTests(unittest.TestCase):
         )
         self.assertIn("python -m build --outdir dist", commands)
         self.assertIn("check_release_privacy.py", commands)
-        self.assertIn("src benchmarks README.md", commands)
+        self.assertIn("src benchmarks demo docs README.md PROJECT_STATUS.md", commands)
+        self.assertIn("pyproject.toml MANIFEST.in dist", commands)
         self.assertIn("run_release_smoke.py", commands)
         self.assertNotIn("OPENAI_API_KEY:", self.text)
 

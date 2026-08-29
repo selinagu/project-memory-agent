@@ -3,9 +3,9 @@ import string
 from difflib import SequenceMatcher
 from typing import Literal, TypedDict
 
+from alignment_models import AlignmentGroup, FieldAlignment
 from artifacts import ParsedArtifactBundle
 from schemas import ProjectState
-from semantic_diff import AlignmentGroup, FieldAlignment
 
 
 STOPWORDS = {

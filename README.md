@@ -15,8 +15,35 @@ publication, resource budgets, manifest-based non-Git freshness, release
 privacy checks, and Python 3.10–3.13 CI. Earlier phases added clean-install
 release smoke, scanner dogfooding, deterministic status-note evaluation,
 bounded Python structure extraction, and bounded checkpoint-time Git metadata.
+P2 adds an enforced architecture contract, accepted design decisions, a public
+dogfooding case study, a deterministic offline smoke, and an engineered live
+demo with versioned fixtures and acceptance criteria.
 The version number describes the repository state; it does not claim that
 v0.1.1 has been published.
+
+## See PMA work
+
+For the presentation-grade workflow—including a 30–45 second silent storyboard,
+a 2–3 minute narrated script, a synthetic Git repository, exact commands, and
+gold expectations—start with the [live demo guide](demo/live/README.md).
+
+The repository intentionally does not embed a GIF until a real live run has
+been rehearsed, privacy-reviewed, and recorded.
+
+## Run the offline smoke in one command
+
+After installing the repository, run the deterministic end-to-end walkthrough:
+
+```bash
+python demo/offline/run_smoke.py
+```
+
+This CI-safe smoke creates a real checkpoint from a synthetic project, verifies it with brief,
+answers one bounded SOURCE-backed question, changes a source file, and detects
+that the checkpoint is stale. It requires no API key and makes no network call;
+fixed responses are injected only at the two LLM boundaries. See
+[`demo/offline/README.md`](demo/offline/README.md) for its deterministic
+contract. It is a reliability check, not the recorded product demo.
 
 ## Why it exists
 
@@ -122,6 +149,16 @@ OPENAI_API_KEY=your_api_key
 Do not commit `.env`.
 
 ## Main commands
+
+The normal product workflow uses configured LLM access for `checkpoint` and
+`ask`; unlike the offline demo, these commands require an API key:
+
+```bash
+pma checkpoint --project-dir .
+pma brief --project-dir .
+pma ask --project-dir . "What should I work on next?"
+pma freshness --project-dir .
+```
 
 Create or update a checkpoint:
 
@@ -241,10 +278,16 @@ files describe the reporting period; they do not override current state.
 ```text
 src/
   checkpoint, scanner, parser, query, memo, and semantic-diff logic
+docs/
+  architecture, accepted design decisions, and public dogfooding case study
+demo/
+  deterministic offline walkthrough and synthetic fixture
+benchmarks/
+  deterministic synthetic repository generator and offline benchmark runner
 evals/
   public synthetic evals and eval runners
 tests/
-  unit and eval-regression tests
+  unit, architecture-contract, and eval-regression tests
 data/examples/
   safe synthetic examples
 PROJECT_STATUS.md
@@ -253,6 +296,34 @@ PROJECT_STATUS.md
 
 Private data, generated checkpoint memory, and live eval outputs are excluded
 from release scope.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    CLI[pma CLI] --> Workflows[Application workflows]
+    Repo[Repository + pma.toml] --> Collection[Bounded scanner / parsers / Git metadata]
+    Workflows --> Collection
+    Collection --> State[ProjectState reconstruction]
+    State --> Storage[Validated history + latest publication]
+    Storage --> Consumers[brief / freshness / ask / memo / status-note]
+    CLI --> Consumers
+```
+
+The CLI is an orchestration boundary. Canonical path resolution is centralized
+in `project_layout`; collection creates bounded deterministic evidence; the
+optional LLM layer reconstructs a validated `ProjectState`; and
+`checkpoint_store` publishes only validated output to successful history and
+`latest`. Ask and memo use derived checkpoint memory and bounded SOURCE lookup,
+while freshness performs the read-only comparison with current repository
+signals.
+
+See [the complete architecture](docs/architecture.md) for module ownership,
+write/read/freshness flows, external storage, dependency rules, and failure
+boundaries. The [P2 architecture audit](docs/architecture-audit.md) separates
+existing strengths, the corrected dependency cycle, accepted debt, and deferred
+work. The rationale and rejected alternatives behind the reliability model are
+recorded as [architecture decision records](docs/decisions/README.md).
 
 ## Evaluation summary
 
@@ -294,7 +365,11 @@ Current release checks:
 - Python source evaluation: 7/7 passed without OpenAI.
 - Git-aware state evaluation: 7/7 passed without OpenAI.
 - Reliability evaluation: 5/5 passed without OpenAI.
-- Full test suite: 317 passed, including 39 pytest subtests.
+- Full test suite: 327 passed, including 39 pytest subtests.
+- Architecture contract: 6 dependency-boundary tests pass, including runtime
+  module classification and cycle detection.
+- Offline demo: checkpoint, brief, SOURCE-backed ask, stale detection, and
+  replacement-checkpoint recommendation pass without network or API key.
 - CI runs the full test suite and all five deterministic eval suites on Python
   3.10, 3.11, 3.12, and 3.13.
 - Scanner dogfooding covers root documents, nested document conventions, and
@@ -532,7 +607,10 @@ pip install -e '.[dev]'
 PYTHONPATH=src python -m unittest discover -s tests -q
 PYTHONPATH=src python -m pytest -q
 python -m compileall -q src tests evals/scripts benchmarks
-python evals/scripts/check_release_privacy.py
+python evals/scripts/check_release_privacy.py src benchmarks demo docs README.md PROJECT_STATUS.md pyproject.toml MANIFEST.in
+python demo/offline/run_smoke.py --non-interactive
+python demo/live/validate_fixture.py
+python demo/live/prepare_live_demo.py --output /tmp/pma-live-demo-check --update-output /tmp/pma-live-demo-update-check.md
 python benchmarks/run_benchmark.py --profile tiny --warmups 0 --repetitions 1 --output /tmp/pma-benchmark-smoke
 git diff --check
 ```

@@ -1,0 +1,61 @@
+project:
+  name: Atlas Cache Gateway
+  stage: pre-rollout validation
+
+checkpoint:
+  required_findings:
+    - bounded policy is below the 55 ms p95 target
+    - full refresh increased origin request volume
+  required_decisions:
+    - bounded key-prefix invalidation was selected
+    - full-cache refresh was rejected
+  required_blockers:
+    - high-churn workload is not yet validated
+  required_next_actions:
+    - run the high-churn workload
+    - validate the 99.9 percent coverage guardrail
+
+memo:
+  required_sections:
+    - goal
+    - current stage
+    - key decision
+    - blocker
+    - next action
+  forbidden_claims:
+    - rollout is complete
+    - production traffic is validated
+
+ask:
+  question: >-
+    Why did we choose bounded key-prefix invalidation over full-cache refresh,
+    and what evidence supports that decision?
+  required_claims:
+    - bounded invalidation limits unnecessary refresh work
+    - full refresh exceeded the latency or origin-load target
+  required_sources:
+    - PROJECT_STATUS.md
+    - benchmark_results.json
+    - failure_analysis.md
+  forbidden_claims:
+    - rollout is complete
+    - production traffic has been validated
+
+after_update:
+  freshness: stale
+  brief_must_recommend_checkpoint: true
+
+evidence_checks:
+  - source: PROJECT_STATUS.md
+    contains:
+      - bounded key-prefix invalidation
+      - high-churn mixed workload has not yet been validated
+  - source: benchmark_results.json
+    contains:
+      - '"p95_latency_ms": 91.2'
+      - '"p95_latency_ms": 48.7'
+      - '"origin_qps_change_percent": 68.0'
+  - source: failure_analysis.md
+    contains:
+      - Full-cache refresh was rejected
+      - high-churn mixed workload remains untested

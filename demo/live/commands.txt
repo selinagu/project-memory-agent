@@ -1,0 +1,11 @@
+cd /tmp/pma-live-demo
+ls
+sed -n '1,160p' PROJECT_STATUS.md
+pma checkpoint --project-dir .
+pma brief --project-dir .
+pma memo --type self --project-dir .
+pma ask --project-dir . --sources "Why did we choose bounded key-prefix invalidation over full-cache refresh, and what evidence supports that decision?"
+cp /tmp/pma-live-demo-update.md PROJECT_STATUS.md
+git diff -- PROJECT_STATUS.md
+pma freshness --project-dir .
+pma brief --project-dir .

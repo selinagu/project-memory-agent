@@ -11,4 +11,5 @@ exclude = [
   "data/projects/**",
   "outputs/**",
   "benchmarks/results/**",
+  "demo/**/fixtures/**",
 ]

@@ -1,0 +1,6 @@
+case_id: legacy_manifest_missing
+case_type: reliability
+capability: backward-compatible uncertainty
+required_includes:
+  - '"status": "unknown"'
+  - '"artifact_manifest_missing"'

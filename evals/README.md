@@ -29,6 +29,8 @@ project cases belong under ignored paths such as `evals/private/` and
   structural previews without executing project code.
 - `git_aware_state`: render and validate bounded checkpoint-time Git metadata,
   non-inference rules, and metadata/SOURCE evidence separation.
+- `reliability`: validate deterministic manifest freshness and conservative
+  behavior for legacy non-Git checkpoints.
 
 ## Query/memo eval levels
 
@@ -43,8 +45,9 @@ layer results do not represent 21 distinct cases.
 | Level 2 | fixture + judge | Scores fixtures and asks optional semantic judge | Yes, judge only | Previously 7/7; not rerun in Phase 0, 1, 2, or 3 |
 | Level 2 | live + judge | Executes commands and asks optional semantic judge | Yes | Previously 7/7; not rerun in Phase 0, 1, 2, or 3 |
 
-The query/memo eval unit tests currently pass 13 tests. The full repository
-test suite currently passes 271 tests, plus 32 pytest subtests.
+The query/memo suite remains seven cases total across its layers. Repository
+test and subtest totals are reported in `PROJECT_STATUS.md` after each release
+gate rather than treated as a fixed eval-case count.
 
 ## Status-note evaluation
 
@@ -125,6 +128,21 @@ The seven cases cover:
 - bounded non-Git fallback
 - deterministic 50-path and 4,000-character limits
 - `CHECKPOINT_METADATA` versus SOURCE evidence separation
+
+## Reliability evaluation
+
+Reliability evaluation is a separate five-case deterministic suite. It does not
+call OpenAI.
+
+```bash
+python evals/scripts/run_reliability_eval.py \
+  --eval-root evals/public/reliability \
+  --output-root evals/outputs
+```
+
+The cases cover unchanged non-Git inputs, content mutation, artifact addition,
+scanner-config changes, and `unknown` for legacy checkpoints without an
+`artifact_manifest.json`.
 
 ## Fixture mode
 
@@ -268,6 +286,7 @@ The synthetic public suite covers:
 - status-note canonical layout and overwrite protection
 - bounded Python structural source extraction
 - Python literal redaction, safe failures, opt-in scope, and non-execution
+- non-Git artifact-manifest freshness and legacy uncertainty
 
 This is focused coverage for known failure modes, not a comprehensive proof of
 real-world reliability.

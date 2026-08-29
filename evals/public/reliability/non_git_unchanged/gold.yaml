@@ -1,0 +1,9 @@
+case_id: non_git_unchanged
+case_type: reliability
+capability: non-Git manifest freshness
+required_includes:
+  - '"status": "current"'
+  - '"artifact_manifest_matches"'
+forbidden_includes:
+  - "/home/"
+  - "OPENAI_API_KEY"

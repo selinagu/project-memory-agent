@@ -7,6 +7,7 @@ from artifacts import ArtifactIndex, ArtifactRecord
 from scanner_config import (
     ScannerConfig,
     ScannerConfigError,
+    ResourceBudgetError,
     load_scanner_config,
     matches_any,
     normalize_relative_path,
@@ -117,6 +118,7 @@ def scan_project(
         scanner_config = load_scanner_config(project_dir)
 
     records: list[ArtifactRecord] = []
+    total_source_bytes = 0
 
     for path in sorted(project_dir.rglob("*")):
         relative_path = path.relative_to(project_dir)
@@ -151,6 +153,28 @@ def scan_project(
             continue
 
         stat = path.lstat() if is_symlink else path.stat()
+        next_count = len(records) + 1
+        if next_count > scanner_config.max_artifacts:
+            raise ResourceBudgetError(
+                "artifact count exceeds [scanner].max_artifacts "
+                f"({scanner_config.max_artifacts})"
+            )
+        if (
+            not is_symlink
+            and artifact_type != "python"
+            and stat.st_size > scanner_config.max_non_python_file_bytes
+        ):
+            raise ResourceBudgetError(
+                f"artifact {match_path!r} exceeds "
+                "[scanner].max_non_python_file_bytes "
+                f"({scanner_config.max_non_python_file_bytes})"
+            )
+        total_source_bytes += stat.st_size
+        if total_source_bytes > scanner_config.max_total_source_bytes:
+            raise ResourceBudgetError(
+                "selected artifact bytes exceed [scanner].max_total_source_bytes "
+                f"({scanner_config.max_total_source_bytes})"
+            )
         modified_time = datetime.fromtimestamp(
             stat.st_mtime,
             tz=timezone.utc,
@@ -173,7 +197,7 @@ def scan_project(
         records.append(record)
 
     return ArtifactIndex(
-        project_dir=str(project_dir),
+        project_dir=".",
         artifacts=records,
     )
 
@@ -193,7 +217,7 @@ def main() -> None:
             project_dir,
             checkpoint_root=layout.checkpoint_root,
         )
-    except (ScannerConfigError, CheckpointLayoutError) as exc:
+    except (ScannerConfigError, ResourceBudgetError, CheckpointLayoutError) as exc:
         parser.error(str(exc))
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

@@ -17,6 +17,14 @@ class CheckpointLayout:
     runs_dir: Path
     mode: str
 
+    @property
+    def building_dir(self) -> Path:
+        return self.checkpoint_root / ".building"
+
+    @property
+    def failed_runs_dir(self) -> Path:
+        return self.checkpoint_root / "failed_runs"
+
     def latest_label(self) -> str:
         """Return a privacy-safe label for the resolved latest directory."""
         return logical_path(self.latest_dir, self.project_dir)
@@ -103,5 +111,5 @@ def generated_output_prefixes(project_dir: Path, checkpoint_root: Path) -> tuple
     except ValueError:
         return ()
     if relative == Path("."):
-        return ("latest", "runs")
+        return (".building", "failed_runs", "latest", "runs")
     return (relative.as_posix(),)

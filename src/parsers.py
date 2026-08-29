@@ -14,6 +14,11 @@ from artifacts import (
     ParsedArtifactBundle,
 )
 from python_source import PYTHON_MAX_BYTES, extract_python_structure
+from scanner_config import (
+    DEFAULT_MAX_NON_PYTHON_FILE_BYTES,
+    ResourceBudgetError,
+    ScannerConfig,
+)
 
 
 _MARKDOWN_HEADING_RE = re.compile(
@@ -273,7 +278,12 @@ def _parse_json(content: str) -> tuple[str, dict[str, Any], list[str]]:
     return normalized, metadata, []
 
 
-def parse_artifact(project_dir: Path, artifact: ArtifactRecord) -> ParsedArtifact:
+def parse_artifact(
+    project_dir: Path,
+    artifact: ArtifactRecord,
+    *,
+    max_non_python_file_bytes: int = DEFAULT_MAX_NON_PYTHON_FILE_BYTES,
+) -> ParsedArtifact:
     path = project_dir / artifact.path
     warnings: list[str] = []
 
@@ -319,8 +329,17 @@ def parse_artifact(project_dir: Path, artifact: ArtifactRecord) -> ParsedArtifac
         )
 
     try:
-        raw_content = path.read_bytes()
+        with path.open("rb") as source:
+            raw_content = source.read(max_non_python_file_bytes + 1)
+        if len(raw_content) > max_non_python_file_bytes:
+            raise ResourceBudgetError(
+                f"artifact {artifact.path!r} exceeds "
+                "[scanner].max_non_python_file_bytes "
+                f"({max_non_python_file_bytes})"
+            )
         content = raw_content.decode("utf-8", errors="replace")
+    except ResourceBudgetError:
+        raise
     except Exception as e:
         return ParsedArtifact(
             path=artifact.path,
@@ -377,14 +396,20 @@ def parse_artifact(project_dir: Path, artifact: ArtifactRecord) -> ParsedArtifac
 def parse_artifacts(
     project_dir: Path,
     artifact_index: ArtifactIndex,
+    scanner_config: ScannerConfig | None = None,
 ) -> ParsedArtifactBundle:
+    scanner_config = scanner_config or ScannerConfig()
     parsed_artifacts = [
-        parse_artifact(project_dir, artifact)
+        parse_artifact(
+            project_dir,
+            artifact,
+            max_non_python_file_bytes=scanner_config.max_non_python_file_bytes,
+        )
         for artifact in artifact_index.artifacts
         if artifact.parser_status == "parsed"
     ]
 
     return ParsedArtifactBundle(
-        project_dir=str(project_dir.resolve()),
+        project_dir=".",
         artifacts=parsed_artifacts,
     )

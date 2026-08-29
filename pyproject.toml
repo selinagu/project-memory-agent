@@ -25,9 +25,11 @@ pma = "pma:main"
 package-dir = {"" = "src"}
 py-modules = [
   "artifacts",
+  "artifact_manifest",
   "brief",
   "checkpoint",
   "checkpoint_reader",
+  "checkpoint_store",
   "diff_states",
   "extract_state",
   "freshness",

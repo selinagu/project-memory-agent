@@ -1,16 +1,19 @@
 import argparse
 import json
+import os
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Callable
 
 from dotenv import load_dotenv
 
 from artifacts import ParsedArtifactBundle
+from artifact_manifest import build_artifact_manifest
 from diff_states import render_progress_since_last
 from git_context import collect_git_context, write_git_context
 from scan_project import scan_project
-from scanner_config import ScannerConfigError, load_scanner_config
+from scanner_config import ResourceBudgetError, ScannerConfigError, load_scanner_config
 from parsers import parse_artifacts
 from project_layout import CheckpointLayoutError, logical_path, resolve_checkpoint_layout
 from extract_state import extract_state
@@ -19,17 +22,39 @@ from render_checkpoint_summary import render_checkpoint_summary
 from schemas import ProjectState
 from semantic_diff import run_semantic_diff_workflow
 from checkpoint_reader import load_checkpoint
+from checkpoint_store import (
+    archive_failed_run,
+    generate_run_id,
+    new_run_metadata,
+    publish_latest,
+    replace_directory_transactionally,
+    validate_successful_run,
+    write_run_metadata,
+)
 
 
-def build_combined_notes(parsed_artifacts: ParsedArtifactBundle) -> str:
+def build_combined_notes(
+    parsed_artifacts: ParsedArtifactBundle,
+    *,
+    max_chars: int | None = None,
+) -> str:
     sections = []
+    total_chars = 0
 
     for artifact in parsed_artifacts.artifacts:
-        sections.append(
+        section = (
             f"<!-- SOURCE: {artifact.path} -->\n"
             f"# Artifact: {artifact.path}\n\n"
             f"{artifact.content_for_llm.strip()}\n"
         )
+        separator_chars = len("\n\n---\n\n") if sections else 0
+        total_chars += separator_chars + len(section)
+        if max_chars is not None and total_chars > max_chars:
+            raise ResourceBudgetError(
+                "combined checkpoint notes exceed "
+                f"[scanner].max_combined_notes_chars ({max_chars})"
+            )
+        sections.append(section)
 
     return "\n\n---\n\n".join(sections)
 
@@ -63,8 +88,18 @@ def generate_checkpoint_outputs(
         encoding="utf-8",
     )
 
+    artifact_manifest = build_artifact_manifest(
+        project_dir,
+        artifact_index,
+        scanner_config,
+    )
+    (output_dir / "artifact_manifest.json").write_text(
+        json.dumps(artifact_manifest, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
     # 2. Parse artifacts and build combined notes
-    parsed_artifacts = parse_artifacts(project_dir, artifact_index)
+    parsed_artifacts = parse_artifacts(project_dir, artifact_index, scanner_config)
 
     parsed_artifacts_path = output_dir / "parsed_artifacts.json"
     parsed_artifacts_path.write_text(
@@ -72,7 +107,10 @@ def generate_checkpoint_outputs(
         encoding="utf-8",
     )
 
-    combined_notes = build_combined_notes(parsed_artifacts)
+    combined_notes = build_combined_notes(
+        parsed_artifacts,
+        max_chars=scanner_config.max_combined_notes_chars,
+    )
 
     combined_notes_path = output_dir / "combined_notes.md"
     combined_notes_path.write_text(combined_notes, encoding="utf-8")
@@ -128,10 +166,42 @@ def write_checkpoint_outputs(
 
 
 def copy_run_to_latest(run_dir: Path, latest_dir: Path) -> None:
-    if latest_dir.exists():
-        shutil.rmtree(latest_dir)
+    publish_latest(run_dir, latest_dir)
 
-    shutil.copytree(run_dir, latest_dir)
+
+def _checkpoint_counts(run_dir: Path) -> tuple[int, int, int]:
+    index = json.loads((run_dir / "artifacts_index.json").read_text(encoding="utf-8"))
+    artifacts = index.get("artifacts", [])
+    return (
+        len(artifacts),
+        sum(int(item.get("size_bytes", 0)) for item in artifacts),
+        len((run_dir / "combined_notes.md").read_text(encoding="utf-8")),
+    )
+
+
+def _write_success_metadata(
+    run_dir: Path,
+    *,
+    run_id: str,
+    model: str,
+    checkpoint_path: str,
+    created_at: str,
+) -> None:
+    artifact_count, source_bytes, combined_notes_chars = _checkpoint_counts(run_dir)
+    write_run_metadata(
+        run_dir,
+        new_run_metadata(
+            run_id=run_id,
+            status="succeeded",
+            stage="complete",
+            model=model,
+            checkpoint_path=checkpoint_path,
+            created_at=created_at,
+            artifact_count=artifact_count,
+            source_bytes=source_bytes,
+            combined_notes_chars=combined_notes_chars,
+        ),
+    )
 
 
 def run_checkpoint_legacy(
@@ -141,11 +211,44 @@ def run_checkpoint_legacy(
 ) -> None:
     """Write one checkpoint directly to ``output_dir`` without history."""
     print("Running checkpoint in legacy output-dir mode.")
-    write_checkpoint_outputs(
-        project_dir=project_dir,
-        output_dir=output_dir,
-        model=model,
-    )
+    project_dir = project_dir.resolve()
+    output_dir = output_dir.expanduser().resolve()
+    run_id = generate_run_id()
+    created_at = datetime.now(timezone.utc).isoformat()
+    building_dir = output_dir.with_name(f".{output_dir.name}.building-{run_id}")
+    try:
+        new_state, new_parsed_artifacts = generate_checkpoint_outputs(
+            project_dir=project_dir,
+            output_dir=building_dir,
+            model=model,
+            checkpoint_root=output_dir,
+        )
+        progress = render_progress_since_last(
+            None,
+            new_state,
+            None,
+            new_parsed_artifacts,
+            None,
+        )
+        (building_dir / "progress_since_last.md").write_text(progress, encoding="utf-8")
+        _write_success_metadata(
+            building_dir,
+            run_id=run_id,
+            model=model,
+            checkpoint_path="legacy-output",
+            created_at=created_at,
+        )
+        validate_successful_run(building_dir)
+        replace_directory_transactionally(
+            building_dir,
+            output_dir,
+            copy_source=False,
+            validator=validate_successful_run,
+        )
+    except BaseException:
+        if building_dir.exists():
+            shutil.rmtree(building_dir, ignore_errors=True)
+        raise
 
 
 def run_checkpoint(
@@ -155,16 +258,26 @@ def run_checkpoint(
     model: str,
     semantic_diff: bool = False,
     semantic_diff_model: str = "gpt-4.1-mini",
+    *,
+    now_factory: Callable[[], datetime] | None = None,
+    suffix_factory: Callable[[], str] | None = None,
 ) -> None:
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-
     layout = resolve_checkpoint_layout(
         project_dir,
         project_name=project_name,
         base_output_dir=base_output_dir,
     )
+    now = (now_factory or (lambda: datetime.now(timezone.utc)))()
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    created_at = now.astimezone(timezone.utc).isoformat()
+    run_id = generate_run_id(
+        now_factory=lambda: now,
+        suffix_factory=suffix_factory,
+    )
     effective_project_name = project_name or layout.project_dir.name
-    run_dir = layout.runs_dir / timestamp
+    building_dir = layout.building_dir / run_id
+    run_dir = layout.runs_dir / run_id
     latest_dir = layout.latest_dir
     run_label = logical_path(run_dir, layout.project_dir)
     previous_checkpoint = load_checkpoint(latest_dir)
@@ -175,49 +288,110 @@ def run_checkpoint(
     print("Running checkpoint.")
     print(f"Project name: {effective_project_name}")
     print(f"Run dir: {run_dir}")
-
-    new_state, new_parsed_artifacts = generate_checkpoint_outputs(
-        project_dir=project_dir,
-        output_dir=run_dir,
+    if building_dir.exists() or run_dir.exists():
+        raise RuntimeError(f"checkpoint run ID collision: {run_id}")
+    building_dir.mkdir(parents=True)
+    metadata = new_run_metadata(
+        run_id=run_id,
+        status="building",
+        stage="scan_and_extract",
         model=model,
-        checkpoint_root=layout.checkpoint_root,
+        checkpoint_path=run_label,
+        created_at=created_at,
     )
-
-    source_hashes_changed = (
-        previous_parsed_artifacts is not None
-        and {
-            artifact.path: artifact.content_hash
-            for artifact in previous_parsed_artifacts.artifacts
-        }
-        != {
-            artifact.path: artifact.content_hash
-            for artifact in new_parsed_artifacts.artifacts
-        }
-    )
-    field_alignments = None
-    if semantic_diff and previous_state is not None and source_hashes_changed:
-        field_alignments = run_semantic_diff_workflow(
-            old_state=previous_state,
-            new_state=new_state,
-            model=semantic_diff_model,
-            output_dir=run_dir,
-            project_name=effective_project_name,
-            run_label=run_label,
+    write_run_metadata(building_dir, metadata)
+    active_dir = building_dir
+    stage = "scan_and_extract"
+    try:
+        new_state, new_parsed_artifacts = generate_checkpoint_outputs(
+            project_dir=project_dir,
+            output_dir=building_dir,
+            model=model,
+            checkpoint_root=layout.checkpoint_root,
         )
 
-    progress = render_progress_since_last(
-        previous_state,
-        new_state,
-        previous_parsed_artifacts,
-        new_parsed_artifacts,
-        field_alignments,
-    )
-    progress_path = run_dir / "progress_since_last.md"
-    progress_path.write_text(progress, encoding="utf-8")
+        stage = "progress"
+        metadata["stage"] = stage
+        write_run_metadata(building_dir, metadata)
+        source_hashes_changed = (
+            previous_parsed_artifacts is not None
+            and {
+                artifact.path: artifact.content_hash
+                for artifact in previous_parsed_artifacts.artifacts
+            }
+            != {
+                artifact.path: artifact.content_hash
+                for artifact in new_parsed_artifacts.artifacts
+            }
+        )
+        field_alignments = None
+        if semantic_diff and previous_state is not None and source_hashes_changed:
+            stage = "semantic_diff"
+            metadata["stage"] = stage
+            write_run_metadata(building_dir, metadata)
+            field_alignments = run_semantic_diff_workflow(
+                old_state=previous_state,
+                new_state=new_state,
+                model=semantic_diff_model,
+                output_dir=building_dir,
+                project_name=effective_project_name,
+                run_label=run_label,
+            )
 
-    copy_run_to_latest(run_dir=run_dir, latest_dir=latest_dir)
+        progress = render_progress_since_last(
+            previous_state,
+            new_state,
+            previous_parsed_artifacts,
+            new_parsed_artifacts,
+            field_alignments,
+        )
+        progress_path = building_dir / "progress_since_last.md"
+        progress_path.write_text(progress, encoding="utf-8")
 
-    print(f"Progress since last checkpoint: {progress_path}")
+        stage = "validate"
+        _write_success_metadata(
+            building_dir,
+            run_id=run_id,
+            model=model,
+            checkpoint_path=run_label,
+            created_at=created_at,
+        )
+        validate_successful_run(building_dir)
+
+        stage = "publish_history"
+        layout.runs_dir.mkdir(parents=True, exist_ok=True)
+        os.replace(building_dir, run_dir)
+        active_dir = run_dir
+        try:
+            layout.building_dir.rmdir()
+        except OSError:
+            pass
+
+        stage = "publish_latest"
+        copy_run_to_latest(run_dir=run_dir, latest_dir=latest_dir)
+    except BaseException:
+        if active_dir.exists():
+            failed_metadata = dict(metadata)
+            failed_metadata.update(
+                status="failed",
+                stage=stage,
+                error_code=f"{stage}_failed",
+            )
+            try:
+                archive_failed_run(
+                    active_dir,
+                    layout.failed_runs_dir,
+                    failed_metadata,
+                )
+            except BaseException:
+                pass
+        try:
+            layout.building_dir.rmdir()
+        except OSError:
+            pass
+        raise
+
+    print(f"Progress since last checkpoint: {run_dir / 'progress_since_last.md'}")
     print(f"Latest updated: {latest_dir}")
 
 
@@ -290,7 +464,7 @@ def main() -> None:
             semantic_diff=args.semantic_diff,
             semantic_diff_model=args.semantic_diff_model,
         )
-    except (CheckpointLayoutError, ScannerConfigError) as exc:
+    except (CheckpointLayoutError, ScannerConfigError, ResourceBudgetError) as exc:
         parser.error(str(exc))
 
 

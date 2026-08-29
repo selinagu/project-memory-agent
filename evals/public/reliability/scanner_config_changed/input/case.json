@@ -1,0 +1,14 @@
+{
+  "checkpoint_manifest": {
+    "schema_version": 1,
+    "project_path": ".",
+    "config_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "artifacts": []
+  },
+  "current_manifest": {
+    "schema_version": 1,
+    "project_path": ".",
+    "config_fingerprint": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "artifacts": []
+  }
+}

@@ -1,0 +1,6 @@
+case_id: scanner_config_changed
+case_type: reliability
+capability: scan-scope regression detection
+required_includes:
+  - '"status": "stale"'
+  - '"scanner_config_changed"'

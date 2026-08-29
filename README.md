@@ -9,14 +9,14 @@ validated `ProjectState`, and stores checkpoint history in a separately
 resolved output layout. You can then ask questions or generate compact re-entry
 and group-update memos from the latest checkpoint.
 
-This is the v0.1.1 code baseline: useful enough to dogfood, intentionally
-small, and still explicit about its limits. Phase 1 adds a reproducible package
-build and clean-install smoke check, cross-layout scanner dogfooding, and a
-separate deterministic status-note eval suite. Phase 2 adds opt-in, bounded
-Python source structure extraction without executing project code. Phase 3
-adds a bounded checkpoint-time Git metadata block to ProjectState extraction
-with an explicit non-inference and evidence-source boundary. The version number
-describes the repository state; it does not claim that v0.1.1 has been published.
+This is the v0.1.1 reliability baseline: useful enough to dogfood, still
+explicit about its limits, and now guarded by transactional checkpoint
+publication, resource budgets, manifest-based non-Git freshness, release
+privacy checks, and Python 3.10–3.13 CI. Earlier phases added clean-install
+release smoke, scanner dogfooding, deterministic status-note evaluation,
+bounded Python structure extraction, and bounded checkpoint-time Git metadata.
+The version number describes the repository state; it does not claim that
+v0.1.1 has been published.
 
 ## Why it exists
 
@@ -52,12 +52,22 @@ The backward-compatible default history layout is:
 ```text
 .project_memory/
   latest/
-  runs/<timestamp>/
+  runs/<UTC-microsecond-run-id>/
+  failed_runs/<run-id>/
 ```
 
 `latest/project_state.json` is the current-state authority for query and memo
 commands. Raw source artifacts are not reopened by `ask` or `memo`; evidence
 comes from derived checkpoint memory and bounded SOURCE-marked snippets.
+
+Checkpoint construction occurs under a private `.building/` directory. A run
+is validated before it enters immutable history, and failed construction is
+moved to `failed_runs/` with bounded stage/error metadata. `latest/` is replaced
+through a prepared sibling plus backup/rollback sequence, so a copy or rename
+failure preserves the previous usable snapshot. This is a failure-safe
+directory transaction; PMA does not claim strict cross-platform atomic
+visibility for an entire directory tree. Legacy `--output-dir` replacement
+uses the same preserve-old-output contract.
 
 Checkpoint storage can instead be inside the project under another name or
 outside it entirely. Commands resolve locations in this order:
@@ -271,6 +281,11 @@ suite. It covers clean and dirty snapshots, changed-path non-inference,
 project-relative subdirectory scope, non-Git fallback, deterministic
 truncation, and separation of checkpoint metadata from SOURCE lookup.
 
+Reliability evaluation is a fifth, separate five-case deterministic suite. It
+covers unchanged non-Git projects, content changes, selected-artifact
+additions, scanner-configuration changes, and conservative `unknown` handling
+for legacy checkpoints without manifests.
+
 Current release checks:
 
 - Query/memo eval tests: 13 passed.
@@ -278,7 +293,10 @@ Current release checks:
 - Status-note evaluation: 6/6 passed without OpenAI.
 - Python source evaluation: 7/7 passed without OpenAI.
 - Git-aware state evaluation: 7/7 passed without OpenAI.
-- Full test suite: 271 passed, including 32 subtests under pytest.
+- Reliability evaluation: 5/5 passed without OpenAI.
+- Full test suite: 304 passed, including 36 pytest subtests.
+- CI runs the full test suite and all five deterministic eval suites on Python
+  3.10, 3.11, 3.12, and 3.13.
 - Scanner dogfooding covers root documents, nested document conventions, and
   mixed repositories with private/generated/checkpoint paths.
 - Wheel and sdist build passed; the wheel installed in a clean temporary
@@ -320,6 +338,10 @@ list adds no restriction.
 include_python = true
 include = ["README.md", "docs/**/*.md", "results/**/*.json", "src/**/*.py"]
 exclude = ["results/debug/**", "archive/**"]
+max_artifacts = 500
+max_non_python_file_bytes = 1048576
+max_total_source_bytes = 10485760
+max_combined_notes_chars = 250000
 ```
 
 Patterns use POSIX-style project-relative paths. `**` matches zero or more path
@@ -339,6 +361,14 @@ a boolean. An include glob such as `src/**/*.py` cannot enable Python scanning
 by itself. Once enabled, Python files still pass through include/exclude rules,
 built-in safety ignores, supported-extension checks, symlink rejection, and
 active checkpoint-root exclusion.
+
+The four budget keys shown above are optional and use those values by default:
+500 selected artifacts, 1 MiB per non-Python file, 10 MiB total selected raw
+bytes, and 250,000 combined-note characters. Values must be positive integers
+(booleans are rejected) and cannot exceed built-in hard safety ceilings.
+Artifact count, per-file size, and total-byte failures occur before extraction;
+the combined-note limit is also enforced before any OpenAI call. Python keeps
+its stricter 262,144-byte structural-extraction limit.
 
 Phase 1 dogfoods this contract against synthetic repositories with root-level
 documents, nested `docs`/`notes`/`research` conventions, and mixed source,
@@ -435,6 +465,13 @@ schema-v1 checkpoint can still be confirmed current, while a dirty schema-v1
 checkpoint is `unknown` unless another signal proves it stale. Unhashable
 directory-like changes are also treated conservatively as `unknown`.
 
+For non-Git projects, each new checkpoint stores a deterministic
+`artifact_manifest.json` containing only logical paths, bounded SHA-256
+fingerprints, and a scanner-config fingerprint. Freshness rebuilds the same
+manifest read-only and detects selected-file additions, removals, content
+changes, and scan-scope changes. Older non-Git checkpoints without a manifest
+return `unknown` rather than a false `current` result.
+
 Freshness checks are read-only: they do not update the checkpoint, create a run,
 capture full diffs, or summarize changes since a prior commit. All four ordinary
 freshness states exit with status code 0; use the human output or JSON `status`
@@ -460,6 +497,8 @@ field when scripting.
 - Git-aware state interpretation is prompt-guided. The deterministic layer
   bounds and labels repository metadata but does not infer semantic progress
   from a diff, file contents, or commit history.
+- Directory publication is rollback-safe but not advertised as a strict
+  cross-platform atomic snapshot switch.
 
 ## Development checks
 
@@ -468,6 +507,7 @@ pip install -e '.[dev]'
 PYTHONPATH=src python -m unittest discover -s tests -q
 PYTHONPATH=src python -m pytest -q
 python -m compileall -q src tests evals/scripts
+python evals/scripts/check_release_privacy.py
 git diff --check
 ```
 
@@ -499,3 +539,15 @@ python evals/scripts/run_git_aware_state_eval.py \
   --eval-root evals/public/git_aware_state \
   --output-root evals/outputs
 ```
+
+Run the deterministic reliability evaluation with:
+
+```bash
+python evals/scripts/run_reliability_eval.py \
+  --eval-root evals/public/reliability \
+  --output-root evals/outputs
+```
+
+GitHub Actions runs these offline gates across Python 3.10–3.13. Its release
+job builds wheel/sdist artifacts, scans source and distributions for likely
+local home paths or secrets, and then executes the clean-install release smoke.

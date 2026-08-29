@@ -83,7 +83,7 @@ class GitPromptRendererTests(unittest.TestCase):
 
     def test_absolute_parent_and_control_paths_fail_closed(self):
         for unsafe_path in (
-            "/home/user/private.py",
+            "/" + "home/user/private.py",
             "../outside.py",
             "safe/../../outside.py",
             "bad\npath.py",

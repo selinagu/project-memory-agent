@@ -1,0 +1,18 @@
+{
+  "checkpoint_manifest": {
+    "schema_version": 1,
+    "project_path": ".",
+    "config_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "artifacts": [
+      {"path": "README.md", "artifact_type": "markdown", "size_bytes": 4, "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "status": "hashed"}
+    ]
+  },
+  "current_manifest": {
+    "schema_version": 1,
+    "project_path": ".",
+    "config_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "artifacts": [
+      {"path": "README.md", "artifact_type": "markdown", "size_bytes": 4, "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "status": "hashed"}
+    ]
+  }
+}

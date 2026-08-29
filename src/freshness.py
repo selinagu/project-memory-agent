@@ -6,8 +6,11 @@ import json
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from artifact_manifest import build_artifact_manifest, validate_artifact_manifest
 from git_context import GIT_CONTEXT_SCHEMA_VERSION, GitContext, collect_git_context
 from project_layout import resolve_checkpoint_layout
+from scan_project import scan_project
+from scanner_config import ResourceBudgetError, ScannerConfigError, load_scanner_config
 
 
 FRESHNESS_SCHEMA_VERSION = 1
@@ -362,6 +365,138 @@ def compare_git_contexts(
     )
 
 
+def compare_artifact_manifests(
+    checkpoint_manifest: dict[str, Any],
+    current_manifest: dict[str, Any],
+    *,
+    checked_at: str | None = None,
+    checkpoint: dict[str, Any] | None = None,
+    current: GitContext | None = None,
+) -> FreshnessResult:
+    timestamp = checked_at or _checked_at()
+    try:
+        before = validate_artifact_manifest(checkpoint_manifest)
+        after = validate_artifact_manifest(current_manifest)
+    except ValueError:
+        return _result(
+            "unknown",
+            timestamp,
+            checkpoint_available=True,
+            checkpoint=checkpoint,
+            current=current,
+            reasons=[
+                _reason(
+                    "artifact_manifest_invalid",
+                    "The checkpoint or current artifact manifest is malformed.",
+                )
+            ],
+        )
+
+    if before["config_fingerprint"] != after["config_fingerprint"]:
+        return _result(
+            "stale",
+            timestamp,
+            checkpoint_available=True,
+            checkpoint=checkpoint,
+            current=current,
+            reasons=[
+                _reason(
+                    "scanner_config_changed",
+                    "Scanner configuration changed after the checkpoint.",
+                )
+            ],
+        )
+
+    before_map = {entry["path"]: entry for entry in before["artifacts"]}
+    after_map = {entry["path"]: entry for entry in after["artifacts"]}
+    before_paths = set(before_map)
+    after_paths = set(after_map)
+    added = sorted(after_paths - before_paths)
+    removed = sorted(before_paths - after_paths)
+    reasons = [
+        *(
+            _reason(
+                "artifact_added",
+                f"{path} was added after the checkpoint.",
+                path,
+            )
+            for path in added
+        ),
+        *(
+            _reason(
+                "artifact_removed",
+                f"{path} was removed after the checkpoint.",
+                path,
+            )
+            for path in removed
+        ),
+    ]
+    modified: list[str] = []
+    uncomparable: list[str] = []
+    for path in sorted(before_paths & after_paths):
+        old_entry = before_map[path]
+        new_entry = after_map[path]
+        if old_entry["status"] != "hashed" or new_entry["status"] != "hashed":
+            if old_entry != new_entry:
+                uncomparable.append(path)
+            elif old_entry["status"] != "hashed":
+                uncomparable.append(path)
+            continue
+        if any(
+            old_entry[field] != new_entry[field]
+            for field in ("artifact_type", "size_bytes", "sha256")
+        ):
+            modified.append(path)
+            reasons.append(
+                _reason(
+                    "artifact_content_changed",
+                    f"{path} changed after the checkpoint.",
+                    path,
+                )
+            )
+    if reasons:
+        return _result(
+            "stale",
+            timestamp,
+            checkpoint_available=True,
+            checkpoint=checkpoint,
+            current=current,
+            reasons=reasons,
+            added=added,
+            removed=removed,
+            modified=modified,
+        )
+    if uncomparable:
+        return _result(
+            "unknown",
+            timestamp,
+            checkpoint_available=True,
+            checkpoint=checkpoint,
+            current=current,
+            reasons=[
+                _reason(
+                    "artifact_not_comparable",
+                    f"{path} could not be fingerprinted reliably.",
+                    path,
+                )
+                for path in uncomparable
+            ],
+        )
+    return _result(
+        "current",
+        timestamp,
+        checkpoint_available=True,
+        checkpoint=checkpoint,
+        current=current,
+        reasons=[
+            _reason(
+                "artifact_manifest_matches",
+                "The selected project artifacts match the latest checkpoint.",
+            )
+        ],
+    )
+
+
 def check_checkpoint_freshness(
     project_dir: Path,
     *,
@@ -395,6 +530,71 @@ def check_checkpoint_freshness(
         project_dir,
         checkpoint_root=layout.checkpoint_root,
     )
+    if (
+        checkpoint.get("available") is False
+        and checkpoint.get("reason") == "not_a_git_repository"
+        and not current.available
+        and current.reason == "not_a_git_repository"
+    ):
+        manifest_path = layout.latest_dir / "artifact_manifest.json"
+        if not manifest_path.is_file():
+            return _result(
+                "unknown",
+                timestamp,
+                checkpoint_available=True,
+                checkpoint=checkpoint,
+                current=current,
+                reasons=[
+                    _reason(
+                        "artifact_manifest_missing",
+                        "The non-Git checkpoint predates artifact manifests.",
+                    )
+                ],
+            )
+        try:
+            checkpoint_manifest = json.loads(
+                manifest_path.read_text(encoding="utf-8")
+            )
+            validate_artifact_manifest(checkpoint_manifest)
+            scanner_config = load_scanner_config(project_dir)
+            current_index = scan_project(
+                project_dir,
+                scanner_config,
+                checkpoint_root=layout.checkpoint_root,
+            )
+            current_manifest = build_artifact_manifest(
+                project_dir,
+                current_index,
+                scanner_config,
+            )
+        except (
+            OSError,
+            UnicodeError,
+            json.JSONDecodeError,
+            ValueError,
+            ScannerConfigError,
+            ResourceBudgetError,
+        ):
+            return _result(
+                "unknown",
+                timestamp,
+                checkpoint_available=True,
+                checkpoint=checkpoint,
+                current=current,
+                reasons=[
+                    _reason(
+                        "artifact_manifest_unavailable",
+                        "Current artifacts could not be compared reliably.",
+                    )
+                ],
+            )
+        return compare_artifact_manifests(
+            checkpoint_manifest,
+            current_manifest,
+            checked_at=timestamp,
+            checkpoint=checkpoint,
+            current=current,
+        )
     return compare_git_contexts(checkpoint, current, checked_at=timestamp)
 
 

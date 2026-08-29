@@ -62,10 +62,13 @@ def parse_since_date(value: str) -> date:
 
 
 def parse_run_date(timestamp: str) -> date | None:
+    if re.match(r"^\d{4}-\d{2}-\d{2}(?:_|T)", timestamp):
+        try:
+            return date.fromisoformat(timestamp[:10])
+        except ValueError:
+            return None
     formats = (
         "%Y-%m-%d",
-        "%Y-%m-%d_%H%M%S",
-        "%Y-%m-%dT%H%M%S",
     )
     for format_string in formats:
         try:

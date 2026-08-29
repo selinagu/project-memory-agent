@@ -1,0 +1,16 @@
+{
+  "checkpoint_manifest": {
+    "schema_version": 1,
+    "project_path": ".",
+    "config_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "artifacts": []
+  },
+  "current_manifest": {
+    "schema_version": 1,
+    "project_path": ".",
+    "config_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "artifacts": [
+      {"path": "notes.md", "artifact_type": "markdown", "size_bytes": 1, "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "status": "hashed"}
+    ]
+  }
+}

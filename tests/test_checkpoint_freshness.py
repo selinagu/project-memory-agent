@@ -99,8 +99,9 @@ class FreshnessCliTests(unittest.TestCase):
 
             self.assertEqual(human_code, 0)
             self.assertEqual(json_code, 0)
-            self.assertIn("Checkpoint freshness: current", human.getvalue())
-            self.assertEqual(json.loads(structured.getvalue())["status"], "current")
+            self.assertIn("Checkpoint freshness: unknown", human.getvalue())
+            self.assertEqual(json.loads(structured.getvalue())["status"], "unknown")
+            self.assertIn("artifact manifests", human.getvalue())
             self.assertEqual(checkpoint_path.read_bytes(), before)
             self.assertEqual(list((root / ".project_memory").iterdir()), runs_before)
 

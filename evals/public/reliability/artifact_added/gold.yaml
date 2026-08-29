@@ -1,0 +1,7 @@
+case_id: artifact_added
+case_type: reliability
+capability: artifact-set regression detection
+required_includes:
+  - '"status": "stale"'
+  - '"artifact_added"'
+  - '"notes.md"'

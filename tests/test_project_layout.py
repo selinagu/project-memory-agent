@@ -117,6 +117,15 @@ class CheckpointLayoutResolutionTests(unittest.TestCase):
                 with self.subTest(kwargs=kwargs), self.assertRaises(CheckpointLayoutError):
                     resolve_checkpoint_layout(project, **kwargs)
 
+    def test_project_root_storage_excludes_all_transaction_directories(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project = Path(temp_dir)
+            prefixes = generated_output_prefixes(project, project)
+        self.assertEqual(
+            prefixes,
+            (".building", "failed_runs", "latest", "runs"),
+        )
+
     def test_all_consumers_resolve_the_same_latest_directory(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

@@ -1,0 +1,7 @@
+case_id: content_changed
+case_type: reliability
+capability: content regression detection
+required_includes:
+  - '"status": "stale"'
+  - '"artifact_content_changed"'
+  - '"README.md"'

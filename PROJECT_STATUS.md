@@ -13,9 +13,24 @@ tool while keeping checkpoint inputs safe, scoped, and auditable.
 
 ## Current stage
 
-Phase 3 has completed bounded Git-aware state reconstruction on top of the
-Phase 2 Python source-awareness baseline. Each checkpoint now provides
-ProjectState extraction with a separately delimited, checkpoint-time Git
+The P0 reliability baseline is complete on top of the Phase 3 Git-aware and
+Phase 2 Python-aware product baseline. It adds:
+
+- validated construction under `.building/`, immutable successful history,
+  failed-run isolation, and rollback-safe `latest`/legacy replacement;
+- unique UTC microsecond run IDs plus privacy-safe `run_metadata.json` stage,
+  status, model, error, and size/count fields;
+- configurable budgets for artifact count, non-Python file bytes, aggregate
+  raw bytes, and combined-note characters, enforced before LLM extraction;
+- deterministic `artifact_manifest.json` and current/stale/unknown freshness
+  for non-Git projects;
+- logical `"."` project paths in new checkpoint artifacts while older
+  absolute-path records remain readable;
+- Python 3.10–3.13 CI, five OpenAI-free deterministic eval suites, build and
+  clean-install smoke, and a release privacy gate.
+
+The earlier Phase 3 capability provides ProjectState extraction with a
+separately delimited, checkpoint-time Git
 metadata block. The block is capped at 4,000 characters and 50 changed paths
 and excludes repository roots, commit subjects, fingerprints, file contents,
 raw Git errors, remotes, logs, and full diffs.
@@ -63,8 +78,9 @@ that old snapshot.
   included in the query/memo case count.
 - Python source deterministic eval: 7/7 pass. This is also a separate suite.
 - Git-aware state deterministic eval: 7/7 pass. This is a fourth separate suite.
+- Reliability deterministic eval: 5/5 pass. This is a fifth separate suite.
+- Full test suite: 304 passed, with 36 pytest subtests also passing.
 - Query/memo eval tests: 13 passed.
-- Full test suite: 271 passed, with 32 pytest subtests also passing.
 - Scanner-focused regression and dogfood tests: 36 passed.
 - Wheel and sdist build: passed.
 - Clean wheel install and installed CLI smoke outside the repository: passed.
@@ -97,6 +113,11 @@ built-in safety ignores and supported-extension checks remain mandatory. The
 configuration uses deterministic project-relative glob matching where `**`
 matches zero or more path segments. Invalid TOML, unknown configuration keys,
 and invalid field types stop checkpointing before output is written.
+
+P0 adds default budgets of 500 selected artifacts, 1 MiB per non-Python file,
+10 MiB total raw input, and 250,000 combined-note characters. Optional
+`pma.toml` overrides must be positive integers below hard ceilings; booleans
+are rejected. These failures do not call OpenAI or update `latest`.
 
 Stage B2 adds deterministic Git context to every checkpoint as
 `git_context.json` and `git_context.md`. It records the current branch, HEAD,
@@ -250,6 +271,9 @@ repository checkpoint.
 - Git-aware semantic interpretation remains prompt-guided. Phase 3 does not
   ingest full diffs, file contents, commit history, remotes, or live repository
   state into ask or memo.
+- Latest and legacy directory replacement is failure-safe with backup/rollback,
+  but PMA does not claim strict cross-platform atomic visibility for directory
+  trees.
 
 ## Source-grounded next actions
 

@@ -59,7 +59,10 @@ class CIWorkflowContractTests(unittest.TestCase):
         self.assertIn("python -m build --outdir dist", commands)
         self.assertIn("check_release_privacy.py", commands)
         self.assertIn("src benchmarks demo docs README.md PROJECT_STATUS.md", commands)
-        self.assertIn("pyproject.toml MANIFEST.in dist", commands)
+        self.assertIn(
+            "pyproject.toml MANIFEST.in LICENSE CHANGELOG.md dist",
+            commands,
+        )
         self.assertIn("run_release_smoke.py", commands)
         self.assertNotIn("OPENAI_API_KEY:", self.text)
 

@@ -50,5 +50,5 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install --disable-pip-version-check -e ".[dev]"
       - run: python -m build --outdir dist
-      - run: python evals/scripts/check_release_privacy.py src benchmarks demo docs README.md PROJECT_STATUS.md pyproject.toml MANIFEST.in dist
+      - run: python evals/scripts/check_release_privacy.py src benchmarks demo docs README.md PROJECT_STATUS.md pyproject.toml MANIFEST.in LICENSE CHANGELOG.md dist
       - run: python evals/scripts/run_release_smoke.py

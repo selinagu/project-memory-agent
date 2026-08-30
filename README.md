@@ -1,13 +1,29 @@
 # Project Memory Agent
 
 Project Memory Agent is a local CLI for turning a project directory into a
-structured, queryable memory checkpoint.
+structured, persistent memory checkpoint. It is designed to reduce context
+loss when returning to a long-running research or software project.
 
 It scans selected artifacts from a tracked project directory, builds
 deterministic parsed notes with source markers, asks an LLM to derive a
 validated `ProjectState`, and stores checkpoint history in a separately
 resolved output layout. You can then ask questions or generate compact re-entry
 and group-update memos from the latest checkpoint.
+
+<p align="center">
+  <img
+    src="docs/assets/pma-readme-preview.gif"
+    alt="PMA reconstructing project state, answering a source-grounded question, and detecting stale memory"
+    width="100%"
+  />
+</p>
+
+The preview is an edited recording of the real CLI workflow: command execution
+and results are preserved, while typing and model wait time are trimmed. PMA's
+query path uses bounded, source-marked checkpoint evidence rather than an
+unbounded repository-wide retrieval layer.
+
+## Release status
 
 This is the v0.1.1 reliability baseline: useful enough to dogfood, still
 explicit about its limits, and now guarded by transactional checkpoint
@@ -21,14 +37,13 @@ demo with versioned fixtures and acceptance criteria.
 The version number describes the repository state; it does not claim that
 v0.1.1 has been published.
 
+See the [changelog](CHANGELOG.md) for release highlights and known limitations.
+
 ## See PMA work
 
 For the presentation-grade workflow—including a 30–45 second silent storyboard,
 a 2–3 minute narrated script, a synthetic Git repository, exact commands, and
 gold expectations—start with the [live demo guide](demo/live/README.md).
-
-The repository intentionally does not embed a GIF until a real live run has
-been rehearsed, privacy-reviewed, and recorded.
 
 ## Run the offline smoke in one command
 
@@ -599,6 +614,10 @@ results, budget interpretation, reproducibility command, and limitations.
   from a diff, file contents, or commit history.
 - Directory publication is rollback-safe but not advertised as a strict
   cross-platform atomic snapshot switch.
+
+## License
+
+Project Memory Agent is available under the [MIT License](LICENSE).
 
 ## Development checks
 

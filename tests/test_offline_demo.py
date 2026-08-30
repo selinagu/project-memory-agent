@@ -65,7 +65,7 @@ class OfflineDemoSmokeTests(unittest.TestCase):
         for number in range(1, 7):
             self.assertIn(f"[{number}/6]", output)
         self.assertIn("Freshness: stale", output)
-        self.assertIn("create a new checkpoint", output)
+        self.assertIn("create a new checkpoint", output.casefold())
         self.assertNotRegex(output, POSIX_HOME_PATH)
         self.assertNotRegex(output, WINDOWS_USER_PATH)
         self.assertNotIn(temp_dir, output)

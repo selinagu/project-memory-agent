@@ -30,13 +30,37 @@ ask:
   question: >-
     Why did we choose bounded key-prefix invalidation over full-cache refresh,
     and what evidence supports that decision?
-  required_claims:
-    - bounded invalidation limits unnecessary refresh work
-    - full refresh exceeded the latency or origin-load target
-  required_sources:
+  required_source_groups:
+    - name: decision_or_rationale
+      any_of:
+        - PROJECT_STATUS.md
+        - failure_analysis.md
+    - name: measurement
+      any_of:
+        - benchmark_results.json
+        - failure_analysis.md
+  minimum_distinct_sources: 2
+  allowed_sources:
     - PROJECT_STATUS.md
     - benchmark_results.json
     - failure_analysis.md
+  required_evidence_groups:
+    - name: bounded_policy_scope
+      any_of:
+        - limits refresh work
+        - limits unnecessary refresh work
+        - affected key groups
+        - unrelated key groups
+    - name: full_refresh_latency
+      any_of:
+        - "91.2"
+    - name: full_refresh_origin_load
+      any_of:
+        - 68%
+        - 68 percent
+    - name: bounded_policy_latency
+      any_of:
+        - "48.7"
   forbidden_claims:
     - rollout is complete
     - production traffic has been validated

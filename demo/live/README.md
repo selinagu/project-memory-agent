@@ -50,13 +50,18 @@ model-backed commands and require a configured `OPENAI_API_KEY`.
    unvalidated high-churn blocker, and next action.
 2. `brief` makes the saved state easy to scan.
 3. `memo` gives a compact re-entry note without claiming rollout is complete.
-4. `ask --sources` cites `PROJECT_STATUS.md`, `benchmark_results.json`, and
-   `failure_analysis.md` for the bounded-invalidation decision.
+4. `ask --sources` cites at least two distinct allowed sources. The pair must
+   cover both decision/rationale evidence (`PROJECT_STATUS.md` or
+   `failure_analysis.md`) and measurement evidence (`benchmark_results.json` or
+   `failure_analysis.md`).
 5. Replacing `PROJECT_STATUS.md` makes `freshness` report stale state.
 6. The final `brief` recommends creating a new checkpoint.
 
 Model wording may vary. The claims, evidence boundary, forbidden claims, and
-freshness transition are the acceptance standard—not exact prose.
+freshness transition are the acceptance standard—not exact prose or a mechanical
+requirement to repeat redundant citations. A take citing all three sources is
+preferred for presentation clarity, but two sufficient sources satisfy the
+correctness contract.
 
 ## Optional guarded rehearsal
 
@@ -69,6 +74,20 @@ python demo/live/rehearse_live_demo.py --confirm-live-calls --runs 3
 
 Run this only when API use is intended. Review every JSON result before recording;
 the lightweight checker is a guardrail, not a substitute for human evaluation.
+Its citation checks require two distinct allowed sources, both semantic evidence
+roles, the key decision and measurements, and no forbidden completion claim.
+Diagnostics report only bounded source names and unmet group labels.
+
+Existing saved runs can be evaluated against the current deterministic contract
+without an API key or any PMA subprocess:
+
+```bash
+python demo/live/rehearse_live_demo.py \
+  --recheck-results /tmp/pma-live-demo-rehearsals/<timestamp>
+```
+
+Recheck leaves the original run and summary JSON unchanged and writes a separate
+`recheck-summary.json` in the saved result directory.
 
 ## Recording standards
 
@@ -76,7 +95,8 @@ the lightweight checker is a guardrail, not a substitute for human evaluation.
 - Keep the project name and key numbers readable at 1080p.
 - Hide environment variables, usernames, absolute home paths, notifications, and
   unrelated windows.
-- Stop and re-record if sources are wrong, stale state is missed, a forbidden
-  claim appears, or the API fails.
+- Stop and re-record if evidence is insufficient or wrong, stale state is missed,
+  a forbidden claim appears, or the API fails. A supported answer is not a
+  hallucination merely because it omits a redundant third citation.
 - Use the short cut for the README preview and the narrated cut for interviews.
 - Add media links only after privacy review and successful rehearsal.

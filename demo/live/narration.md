@@ -10,7 +10,7 @@ overlay captions.
 | 0–4s | Show the fixture files and `PROJECT_STATUS.md`. | “Back after two weeks. What changed?” |
 | 4–12s | Type `pma checkpoint --project-dir .`; pause on the summary. | “Reconstruct current state” |
 | 12–18s | Type `pma brief --project-dir .`. | “Recover goal, decision, blocker, next action” |
-| 18–30s | Type the source-backed `pma ask` command; highlight its three sources. | “Answers stay inside an evidence boundary” |
+| 18–30s | Type the source-backed `pma ask` command; highlight decision/rationale and measurement evidence. | “Answers stay inside an evidence boundary” |
 | 30–36s | Copy the update and show `git diff`. | “The repository moves on” |
 | 36–45s | Type `pma freshness --project-dir .`; pause on `stale`. | “PMA knows when its memory expires” |
 
@@ -56,7 +56,11 @@ full-refresh result and increased origin load, and cite only the status,
 benchmark, and failure-analysis files. This is bounded retrieval, not an open-ended
 whole-repository answer.”
 
-Pause so all three source names can be read.
+Pause so at least two distinct allowed sources can be read. Together they must
+cover decision/rationale and measurement evidence; all three possible source
+pairs satisfy this when the claims are supported. Prefer a clean take that
+displays all three sources, but do not describe a fully supported two-source
+answer as a hallucination merely because it omits redundant evidence.
 
 ### 1:45–2:15 — prove memory can become stale
 
@@ -82,6 +86,11 @@ End on the architecture diagram or repository README.
 
 - Prepare a fresh workspace and validate the fixture before recording.
 - Run at least three guarded rehearsals and manually inspect claims and sources.
+  Acceptance requires two distinct allowed sources covering decision/rationale
+  and measurement roles, the key measurements, and no forbidden completion
+  claim. Prefer all three sources in the final recording. Use offline recheck
+  when the deterministic contract changes; do not spend API calls to reevaluate
+  already saved answers.
 - Use a terminal profile with no host, username, API key, or shell-history leaks.
 - Keep `commands.txt` nearby, but type each product command visibly.
 - Verify the initial Git tree is clean and the update changes only

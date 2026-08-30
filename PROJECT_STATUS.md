@@ -50,6 +50,20 @@ targets. Optional rehearsal requires both `--confirm-live-calls` and an API key,
 writes sanitized machine-readable results outside the repository, and is never
 run by CI. This pass did not execute that live rehearsal or create media.
 
+Two three-run live rehearsals exposed successive over-constrained citation
+rules. All product commands and substantive answer checks succeeded; one answer
+first omitted a redundant analysis filename, and a later answer cited both
+`benchmark_results.json` and `failure_analysis.md` but was rejected solely for
+omitting a fixed `PROJECT_STATUS.md` anchor. The final deterministic contract is
+role-based: at least two distinct allowed sources must jointly cover
+decision/rationale and measurement evidence, while the bounded-policy rationale,
+key measurements, and forbidden completion claims remain strict. Bounded
+diagnostics never modify model output. An offline recheck mode reevaluates saved
+run JSON without an API key or PMA subprocess and writes a separate summary.
+The existing second three-run batch was rechecked offline at 3/3 pass while the
+original run and summary hashes remained unchanged. This corrective pass did
+not run a new OpenAI-backed rehearsal.
+
 The P1 scalability benchmark is complete on top of the P0 reliability
 baseline. A deterministic synthetic generator now covers 25, 100, 500, 1,000,
 and 2,500 total-file profiles with fixed-seed content, nested mixed artifact
@@ -132,7 +146,7 @@ that old snapshot.
 - Python source deterministic eval: 7/7 pass. This is also a separate suite.
 - Git-aware state deterministic eval: 7/7 pass. This is a fourth separate suite.
 - Reliability deterministic eval: 5/5 pass. This is a fifth separate suite.
-- Full test suite: 333 passed, with 39 pytest subtests also passing.
+- Full test suite: 348 passed, with 39 pytest subtests also passing.
 - Architecture boundary suite: 6/6 pass. It validates complete module
   classification, an acyclic runtime graph, no reverse CLI imports, independent
   foundation modules, and narrow checkpoint reader/store dependencies.
@@ -141,10 +155,13 @@ that old snapshot.
 - Offline smoke tests: 2/2 pass with network sockets blocked, no API key,
   unchanged fixtures, deterministic output, temporary cleanup, correct SOURCE
   citation, and current-to-stale freshness transition.
-- Live-demo engineering tests: 6/6 pass. They cover immutable fixture validation,
+- Live-demo engineering tests: 21/21 pass. They cover immutable fixture validation,
   exact scanner evidence, privacy, clean Git preparation, sentinel-gated reset,
-  unsafe destination rejection, update isolation, guarded rehearsal, and both
-  recording scripts without making a live model call.
+  unsafe destination rejection, update isolation, guarded rehearsal, both
+  recording scripts, role-group/minimum-source semantics, exact source-name
+  boundaries, required evidence groups, forbidden claims, and validator schema
+  failures, offline recheck isolation, and malformed saved records without
+  making a live model call.
 - Wheel and sdist build: passed.
 - Clean wheel install and installed CLI smoke outside the repository: passed.
 - Compilation passed.

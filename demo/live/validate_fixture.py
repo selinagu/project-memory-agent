@@ -43,6 +43,59 @@ def load_gold() -> dict[str, Any]:
     return value
 
 
+def _source_contract(gold: dict[str, Any]) -> tuple[set[str], set[str]]:
+    contract = gold.get("ask", {})
+    allowed = contract.get("allowed_sources")
+    groups = contract.get("required_source_groups")
+    minimum = contract.get("minimum_distinct_sources")
+    evidence_groups = contract.get("required_evidence_groups")
+
+    if not isinstance(allowed, list) or not allowed or not all(
+        isinstance(item, str) and item for item in allowed
+    ):
+        raise FixtureValidationError("ask.allowed_sources must be a non-empty string list")
+    if len(set(allowed)) != len(allowed):
+        raise FixtureValidationError("ask.allowed_sources must not contain duplicates")
+    allowed_set = set(allowed)
+    if isinstance(minimum, bool) or not isinstance(minimum, int) or minimum <= 0:
+        raise FixtureValidationError("ask.minimum_distinct_sources must be positive")
+    if minimum > len(allowed_set):
+        raise FixtureValidationError(
+            "ask.minimum_distinct_sources exceeds allowed source count"
+        )
+    if not isinstance(groups, list) or not groups:
+        raise FixtureValidationError("ask.required_source_groups must be non-empty")
+
+    candidates: set[str] = set()
+    for group in groups:
+        if not isinstance(group, dict):
+            raise FixtureValidationError("each ask source group must be a mapping")
+        any_of = group.get("any_of")
+        if not isinstance(any_of, list) or not any_of or not all(
+            isinstance(item, str) and item for item in any_of
+        ):
+            raise FixtureValidationError("each ask source group needs non-empty any_of")
+        group_sources = set(any_of)
+        if not group_sources <= allowed_set:
+            raise FixtureValidationError("ask source-group candidates must be allowed")
+        candidates.update(group_sources)
+
+    if not isinstance(evidence_groups, list) or not evidence_groups:
+        raise FixtureValidationError("ask.required_evidence_groups must be non-empty")
+    for group in evidence_groups:
+        if not isinstance(group, dict):
+            raise FixtureValidationError("each ask evidence group must be a mapping")
+        any_of = group.get("any_of")
+        if not isinstance(any_of, list) or not any_of or not all(
+            isinstance(item, (str, int, float)) and not isinstance(item, bool)
+            for item in any_of
+        ):
+            raise FixtureValidationError(
+                "each ask evidence group needs a non-empty scalar any_of"
+            )
+    return allowed_set, candidates
+
+
 def validate_fixture() -> dict[str, object]:
     missing = [name for name in EXPECTED_ARTIFACTS if not (BASE_FIXTURE / name).is_file()]
     if missing or not UPDATE_FIXTURE.is_file() or not GOLD_PATH.is_file():
@@ -54,9 +107,13 @@ def validate_fixture() -> dict[str, object]:
     if artifacts != EXPECTED_ARTIFACTS:
         raise FixtureValidationError(f"unexpected scanner selection: {artifacts}")
 
-    required_sources = tuple(gold.get("ask", {}).get("required_sources", []))
-    if any(source not in artifacts for source in required_sources):
-        raise FixtureValidationError("gold requires a source outside scanner evidence")
+    allowed_sources, source_candidates = _source_contract(gold)
+    if any(source not in artifacts for source in allowed_sources):
+        raise FixtureValidationError("gold allows a source outside scanner evidence")
+    if source_candidates != allowed_sources:
+        raise FixtureValidationError(
+            "every allowed ask source must be an anchor or source-group candidate"
+        )
 
     for check in gold.get("evidence_checks", []):
         source = str(check["source"])
@@ -85,7 +142,7 @@ def validate_fixture() -> dict[str, object]:
 
     return {
         "artifact_count": len(artifacts),
-        "gold_source_count": len(required_sources),
+        "gold_source_candidate_count": len(allowed_sources),
         "update_changes_status": True,
         "privacy_findings": 0,
     }
@@ -99,7 +156,7 @@ def main() -> int:
         return 1
     print("Live demo fixture: PASS")
     print(f"Artifacts: {report['artifact_count']}")
-    print(f"Gold sources: {report['gold_source_count']}")
+    print(f"Gold source candidates: {report['gold_source_candidate_count']}")
     print("Update changes project status: yes")
     print("Privacy findings: 0")
     return 0

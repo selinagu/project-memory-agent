@@ -7,6 +7,11 @@ The public evals are intentionally synthetic and commit-safe. Private real
 project cases belong under ignored paths such as `evals/private/` and
 `evals/private_outputs/`.
 
+These suites are automated regression checks. They are separate from the small
+human context-recovery timing study documented in
+[`docs/developer-evaluation.md`](../docs/developer-evaluation.md), and their
+results must not be reported as additional participants or repositories.
+
 ## Public eval principles
 
 - Eval cases describe semantic expectations, not exact full-output matches.
